@@ -1,3 +1,27 @@
+# ZK Yield Proof Vault
+
+## Overview
+- TBD on Mantle
+
+<br>
+
+## Tech Stack
+
+- ZK circuit: `Noir`
+- ZK KYC: `zkMe`
+- Blockchain: `Mantle` Testnet
+
+<br>
+
+## Resources
+
+- TBD
+
+
+<br>
+
+<hr>
+
 ## Foundry
 
 **Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
