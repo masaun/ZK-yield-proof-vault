@@ -1,1 +1,5 @@
+# Circuit artifacts
+target
+
+# Secret files
 .env
