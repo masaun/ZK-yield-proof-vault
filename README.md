@@ -15,7 +15,9 @@
 
 ## Resources
 
-- TBD
+- Mantle:
+  - Deployment:
+    - Testnet: https://docs.mantle.xyz/network/for-node-operators/deployment-guides/testnet-v1.4.1
 
 
 <br>
