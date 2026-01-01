@@ -7,7 +7,7 @@
 
 ## Tech Stack
 
-- ZK circuit: `Noir`
+- ZK circuit: `Noir` (`v1.0.0-beta.17`)
 - ZK KYC: `zkMe`
 - Blockchain: `Mantle` Testnet
 
