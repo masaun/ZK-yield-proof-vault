@@ -11,9 +11,9 @@ rm -rf target
 #echo "Install the Noir/Nargo v1.0.0-beta.17..."
 #noirup --version 1.0.0-beta.17
 
-# Align the Noir/Nargo version (1.0.0-beta.17) and bb.js version (0.87.0) of the local machine.
-#echo "Install the bb.js version v0.87.0..."
-#bbup --version 0.87.0
+# Align the Noir/Nargo version (v1.0.0-beta.17) and bb.js version (v3.0.0-nightly.20251104) of the local machine.
+#echo "Install the bb.js version v3.0.0-nightly.20251104..."
+#bbup --version 3.0.0-nightly.20251104 (Previous bb.js version: v0.87.0)
 
 echo "Check the Noir/Nargo version of the local machine (This version is supposed to be v1.0.0-beta.17)..."
 nargo -V
@@ -29,27 +29,28 @@ if ! nargo compile; then
 fi
 
 echo "Gate count:"
-bb gates -b target/zk-yield-proof-vault.json | jq '.functions[0].circuit_size'
+bb gates -b target/zk_yield_proof_vault.json | jq '.functions[0].circuit_size'
 
 # Create version-specific directory
-mkdir -p "../../app/circuits/zk-yield-proof-vault-$VERSION"
+mkdir -p "../app/circuits/zk-yield-proof-vault-$VERSION"
 mkdir -p "target/vk"
 
-echo "Copying circuit.json to app/circuits/zk-yield-proof-vault-$VERSION..."
-cp target/zk-yield-proof-vault.json "../../app/circuits/zk-yield-proof-vault-$VERSION/zk-yield-proof-vault.json"
+echo "Copying zk-yield-proof-vault.json to app/circuits/zk-yield-proof-vault-$VERSION..."
+cp target/zk_yield_proof_vault.json "../app/circuits/zk-yield-proof-vault-$VERSION/zk-yield-proof-vault.json"
 
 echo "Generating a vkey (verification key)..."
-bb write_vk -b ./target/zk-yield-proof-vault.json -o ./target/vk --oracle_hash keccak
+bb write_vk -b ./target/zk_yield_proof_vault.json -o ./target/vk --oracle_hash keccak   # bb.js v3.0.0-nightly.20251104
+#bb write_vk -b ./target/zk_yield_proof_vault.json -o ./target/vk --oracle_hash keccak  # bb.js v0.87.0 (Same with v3.0.0-nightly.20251104)
 
 echo "Generating vk.json to app/circuits/zk-yield-proof-vault-$VERSION..."
-node -e "const fs = require('fs'); fs.writeFileSync('../../app/circuits/zk-yield-proof-vault-$VERSION/vk.json', JSON.stringify(Array.from(Uint8Array.from(fs.readFileSync('./target/vk/vk')))));"
+node -e "const fs = require('fs'); fs.writeFileSync('../app/circuits/zk-yield-proof-vault-$VERSION/vk.json', JSON.stringify(Array.from(Uint8Array.from(fs.readFileSync('./target/vk/vk')))));"
 
 echo "Generate a Solidity Verifier contract from the vkey..."
 bb write_solidity_verifier -k ./target/vk/vk -o ./target/Verifier.sol
 
-echo "Copy a Solidity Verifier contract-generated (Verifier.sol) into the ./contracts/src/circuits/honk-verifier directory"
-cp ./target/Verifier.sol ../../contracts/src/circuits/honk-verifier
+echo "Copy a Solidity Verifier contract-generated (Verifier.sol) into the ../contracts/src/circuits/honk-verifier directory"
+cp ./target/Verifier.sol ../contracts/src/circuits/honk-verifier
 
-echo "Rename the Verifier.sol with the honk_vk.sol in the ./contracts/circuit/honk-verifier directory"
-mv ../../contracts/src/circuits/honk-verifier/Verifier.sol ../../contracts/src/circuits/honk-verifier/honk_vk.sol
+echo "Rename the Verifier.sol with the honk_vk.sol in the ../contracts/src/circuits/honk-verifier directory"
+mv ../contracts/src/circuits/honk-verifier/Verifier.sol ../contracts/src/circuits/honk-verifier/honk_vk.sol
 echo "Done" 

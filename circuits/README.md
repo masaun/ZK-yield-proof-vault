@@ -11,7 +11,6 @@
 
 <br>
 
-
 ## Installation - Noir
 
 Install [noirup](https://noir-lang.org/docs/getting_started/noir_installation) with
@@ -87,3 +86,9 @@ sh info.sh
 
 Proving time: 39709ms
 Circuit size: 286738
+
+<br>
+
+## Resources
+
+- https://barretenberg.aztec.network/docs/getting_started
