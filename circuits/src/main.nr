@@ -38,25 +38,25 @@ fn main(
     expected_leaf_hash: Field
     // x: u64, 
     // y: pub u64
-) 
+) {
     // @dev - Update the Merkle tree with the user's balance
-    let new_merkle_root = update_merkle_tree(user_balance as Field, balance_root as Field, [merkle_inclusion_proof]);
+    let new_merkle_root = update_merkle_tree(user_balance as Field, balance_root as Field, []);
 
     // @dev - Constraint: Merkle Inclusion
-    assert(user_balance as Field == balance_root);
+    assert_eq(user_balance as Field, balance_root as Field);
 
     // @dev - Constraint: Correct Yield Formula
-    assert(user_yield == user_balance * yield_rate * (epoch_end - epoch_start));
+    assert_eq(user_yield, user_balance * yield_rate * (epoch_end - epoch_start));
 
     // @dev - Constraint: Compliance Constraint (Optional)
-    assert(kyc_eligibility_flags == true);
+    assert_eq(kyc_eligibility_flags, true);
 
     // @dev - Constraint: Conservation of Yield
     assert(user_yield <= total_yield);
 
     // @dev - All user balances are inserted into a Merkle tree. Here is how a leaf is computed (TODO: Should do below on FE):
     let leaf_hash = pedersen_hash([user_address, user_balance as Field, optional_kyc_commitment]);
-    assert(leaf_hash == expected_leaf_hash);
+    assert_eq(leaf_hash, expected_leaf_hash);
 
     //assert(x != y);
 }
