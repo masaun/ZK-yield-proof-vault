@@ -1,6 +1,12 @@
 mod tests;
+mod libs;
 
-use std::hash::pedersen_hash;
+use std::hash::pedersen_hash;  // @dev - Pedersen Hash function
+use libs::{
+        merkle_tree_manager::{
+            update_merkle_tree
+        }
+};
 
 // Private Inputs
 // - User balances
@@ -32,9 +38,12 @@ fn main(
     expected_leaf_hash: Field
     // x: u64, 
     // y: pub u64
-) {
+) 
+    // @dev - Update the Merkle tree with the user's balance
+    let new_merkle_root = update_merkle_tree(user_balance as Field, balance_root as Field, [merkle_inclusion_proof]);
+
     // @dev - Constraint: Merkle Inclusion
-    assert(user_balance == balance_root);
+    assert(user_balance as Field == balance_root);
 
     // @dev - Constraint: Correct Yield Formula
     assert(user_yield == user_balance * yield_rate * (epoch_end - epoch_start));
