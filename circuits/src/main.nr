@@ -31,7 +31,7 @@ fn main(
     merkle_inclusion_proof: Field,
     expected_leaf_hash: Field,
     // @dev - Public Inputs
-    balance_root: pub u64,          // @dev - Merkle root of the user balance, which is measured in the last time.
+    current_balance_root: pub u64,          // @dev - Merkle root of the user balance, which is measured in the last time.
     yield_rate: pub u64,
     epoch_start: pub u64,
     epoch_end: pub u64,
@@ -39,11 +39,11 @@ fn main(
     // x: u64, 
     // y: pub u64
 ) -> pub (Field, Field) {
-    // @dev - Update the Merkle tree with the user's balance and retrieve the new Merkle root as the return value
-    let new_merkle_root = update_merkle_tree(user_balance as Field, balance_root as Field, []);
+    // @dev - Update the Merkle tree with the user's balance and retrieve the new Merkle root of the user balances as the return value
+    let new_balance_root = update_merkle_tree(user_balance as Field, current_balance_root as Field, []);
 
     // @dev - Constraint: Merkle Inclusion
-    assert_eq(user_balance as Field, balance_root as Field);
+    assert_eq(user_balance as Field, current_balance_root as Field);
 
     // @dev - Constraint: Correct Yield Formula
     assert_eq(user_yield, user_balance * yield_rate * (epoch_end - epoch_start));
@@ -63,5 +63,5 @@ fn main(
     // @dev - [TODO]: Add the logic for calculating a nullifier in order for each deposit to prevent double-spending
 
     // @dev - Return value
-    (leaf_hash, new_merkle_root)
+    (leaf_hash, new_balance_root)
 }
