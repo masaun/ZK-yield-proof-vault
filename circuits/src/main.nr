@@ -24,14 +24,14 @@ fn main(
     // @dev - Private Inputs
     user_address: Field,
     user_yield: u64,
-    user_balance: u64,
+    user_balance: u64,              // @dev - New user balance to be inserted into the Merkle tree
     deposit_timestamps: u64,
     kyc_eligibility_flags: bool,    // zkMe credential proof (hash) or flag in boolean
     optional_kyc_commitment: Field, // Optional KYC commitment hash
     merkle_inclusion_proof: Field,
     expected_leaf_hash: Field,
     // @dev - Public Inputs
-    balance_root: pub u64,              // Merkle root of user balance
+    balance_root: pub u64,          // @dev - Merkle root of the user balance, which is measured in the last time.
     yield_rate: pub u64,
     epoch_start: pub u64,
     epoch_end: pub u64,
