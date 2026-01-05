@@ -38,7 +38,7 @@ fn main(
     total_yield: pub u64
     // x: u64, 
     // y: pub u64
-) {
+) -> pub (Field, Field) {
     // @dev - Update the Merkle tree with the user's balance and retrieve the new Merkle root as the return value
     let new_merkle_root = update_merkle_tree(user_balance as Field, balance_root as Field, []);
 
@@ -61,4 +61,7 @@ fn main(
     //assert(x != y);
 
     // @dev - [TODO]: Add the logic for calculating a nullifier in order for each deposit to prevent double-spending
+
+    // @dev - Return value
+    (leaf_hash, new_merkle_root)
 }

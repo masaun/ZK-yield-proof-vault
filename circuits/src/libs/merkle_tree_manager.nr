@@ -16,7 +16,7 @@ pub fn update_merkle_tree(entry: Field, merkle_root: Field, paths: [Field; 0]) -
     // prove it is in the tree (kinda redundant isn't it?)
     mt.membership(entry, 0, paths);
 
-    // @dev - Return the new Merkle root
+    // @dev - Return the new Merkle Root
     mt.root
 
     // @dev - Return the new entire Merkle Tree
