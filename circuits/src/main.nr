@@ -59,4 +59,6 @@ fn main(
     assert_eq(leaf_hash, expected_leaf_hash);
 
     //assert(x != y);
+
+    // @dev - [TODO]: Add the logic for calculating a nullifier in order for each deposit to prevent double-spending
 }
