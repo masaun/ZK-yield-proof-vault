@@ -39,7 +39,7 @@ fn main(
     // x: u64, 
     // y: pub u64
 ) {
-    // @dev - Update the Merkle tree with the user's balance
+    // @dev - Update the Merkle tree with the user's balance and retrieve the new Merkle root as the return value
     let new_merkle_root = update_merkle_tree(user_balance as Field, balance_root as Field, []);
 
     // @dev - Constraint: Merkle Inclusion
