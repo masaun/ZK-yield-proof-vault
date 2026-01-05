@@ -9,9 +9,11 @@ pub fn hasher(leaves: [Field; 2]) -> Field {
 pub fn update_merkle_tree(entry: Field, merkle_root: Field, paths: [Field; 0]) -> Field {
 //pub fn update_merkle_tree(entry: Field, merkle_root: Field, paths: [Field; 0]) -> MerkleTree<Field> {
     let mut mt = MerkleTree::new(hasher);
+    println(f"Initial Merkle Tree: {mt}");
 
     // add at index 0
     mt.add(entry, 0, paths);
+    println(f"Updated Merkle Tree: {mt}");
 
     // prove it is in the tree (kinda redundant isn't it?)
     mt.membership(entry, 0, paths);
