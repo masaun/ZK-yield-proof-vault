@@ -3,9 +3,9 @@ mod libs;
 
 use std::hash::pedersen_hash;  // @dev - Pedersen Hash function
 use libs::{
-        merkle_tree_manager::{
-            update_merkle_tree
-        }
+    merkle_tree_manager::{
+        update_merkle_tree
+    }
 };
 
 // Private Inputs
@@ -29,13 +29,13 @@ fn main(
     kyc_eligibility_flags: bool,    // zkMe credential proof (hash) or flag in boolean
     optional_kyc_commitment: Field, // Optional KYC commitment hash
     merkle_inclusion_proof: Field,
+    expected_leaf_hash: Field,
     // @dev - Public Inputs
-    balance_root: u64,              // Merkle root of user balance
-    yield_rate: u64,
-    epoch_start: u64,
-    epoch_end: u64,
-    total_yield: u64,
-    expected_leaf_hash: Field
+    balance_root: pub u64,              // Merkle root of user balance
+    yield_rate: pub u64,
+    epoch_start: pub u64,
+    epoch_end: pub u64,
+    total_yield: pub u64
     // x: u64, 
     // y: pub u64
 ) {
