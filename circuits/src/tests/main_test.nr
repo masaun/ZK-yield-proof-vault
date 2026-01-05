@@ -31,14 +31,15 @@ fn test_main_valid_yield_proof() {
     let optional_kyc_commitment: Field = 0x987654321;
     let merkle_inclusion_proof: Field = 0;
     
-    // Calculate expected leaf hash
+    // @dev - Calculate expected leaf hash
     let expected_leaf_hash = pedersen_hash([user_address, user_balance as Field, optional_kyc_commitment]);
     
-    // Public inputs
+    // @dev - Public inputs
     let balance_root: u64 = user_balance; // Simplified for test
     let total_yield: u64 = user_yield + 1000; // Total yield should be >= user_yield
     
-    // Call main function
+
+    // @dev - Call the main() function
     let (leaf_hash, new_merkle_root) = main(
         user_address,
         user_yield,
@@ -55,6 +56,9 @@ fn test_main_valid_yield_proof() {
         total_yield
     );
     
+    // @dev - Retrieve a new Merkle root, which is emitted from the ZK circuit as a "public output"
+    println(f"new Merkle root: {new_merkle_root}");
+
     // Verify outputs
     assert_eq(leaf_hash, expected_leaf_hash);
     // new_merkle_root should be non-zero
