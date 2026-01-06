@@ -7,7 +7,8 @@
 //-------------------------------------------------------------------------//
 mod test_of_hasher_function {
     use crate::libs::merkle_tree_manager::{hasher, update_merkle_tree};
-    use std::hash::pedersen_hash;
+    use poseidon::poseidon2;         // @dev - Poseidon Hash
+    //use std::hash::pedersen_hash;  // @dev - Pedersen Hash function
 
     /**
     * @notice - Basic functionality test
@@ -84,10 +85,12 @@ mod test_of_hasher_function {
         let leaves: [Field; 2] = [0xAABBCC, 0xDDEEFF];
         
         let hash_from_hasher = hasher(leaves);
-        let hash_from_pedersen = pedersen_hash(leaves);
+        let hash_from_poseidon2 = poseidon2::Poseidon2::hash(leaves, leaves.len());
+        //let hash_from_pedersen = pedersen_hash(leaves);
         
         // Should match since hasher uses pedersen_hash internally
-        assert_eq(hash_from_hasher, hash_from_pedersen);
+        assert_eq(hash_from_hasher, hash_from_poseidon2);
+        //assert_eq(hash_from_hasher, hash_from_pedersen);
     }
 
     /**
@@ -117,10 +120,13 @@ mod test_of_hasher_function {
 //-------------------------------------------------------------------------------------//
 mod test_of_update_merkle_tree_function {
     use crate::libs::merkle_tree_manager::{hasher, update_merkle_tree};
-    use std::hash::pedersen_hash;
+
+    use poseidon::poseidon2;         // @dev - Poseidon Hash
+    //use std::hash::pedersen_hash;  // @dev - Pedersen Hash function
+    
     /**
-    * @notice - Basic tree update functionality
-    */
+     * @notice - Basic tree update functionality
+     */
     #[test]
     fn test_update_merkle_tree_basic() {
         // @dev - Test basic Merkle tree update with single entry
