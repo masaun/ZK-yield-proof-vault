@@ -1,7 +1,9 @@
 mod tests;
 mod libs;
 
-use std::hash::pedersen_hash;  // @dev - Pedersen Hash function
+use poseidon::poseidon2;         // @dev - Poseidon Hash
+//use std::hash::pedersen_hash;  // @dev - Pedersen Hash function
+
 use libs::{
     merkle_tree_manager::{
         update_merkle_tree
@@ -31,7 +33,7 @@ fn main(
     merkle_inclusion_proof: Field,
     expected_leaf_hash: Field,
     // @dev - Public Inputs
-    current_balance_root: pub u64,          // @dev - Merkle root of the user balance, which is measured in the last time.
+    current_balance_root: pub Field,          // @dev - Merkle root of the user balance, which is measured in the last time.
     yield_rate: pub u64,
     epoch_start: pub u64,
     epoch_end: pub u64,
@@ -40,7 +42,7 @@ fn main(
     // y: pub u64
 ) -> pub (Field, Field) {
     // @dev - Update the Merkle tree with the user's balance and retrieve the new Merkle root of the user balances as the return value
-    let new_balance_root = update_merkle_tree(user_balance as Field, current_balance_root as Field, []);
+    let new_balance_root = update_merkle_tree(user_balance as Field, current_balance_root, []);
 
     // @dev - Constraint: Merkle Inclusion
     assert_eq(user_balance as Field, current_balance_root as Field);
@@ -55,7 +57,9 @@ fn main(
     assert(user_yield <= total_yield);
 
     // @dev - All user balances are inserted into a Merkle tree. Here is how a leaf is computed (TODO: Should do below on FE):
-    let leaf_hash = pedersen_hash([user_address, user_balance as Field, optional_kyc_commitment]);
+    let inputs = [user_address, user_balance as Field, optional_kyc_commitment];
+    let leaf_hash = poseidon2::Poseidon2::hash(inputs, inputs.len());
+    //let leaf_hash = pedersen_hash([user_address, user_balance as Field, optional_kyc_commitment]);
     assert_eq(leaf_hash, expected_leaf_hash);
 
     //assert(x != y);

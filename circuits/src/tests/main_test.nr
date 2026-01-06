@@ -1,5 +1,7 @@
 use crate::main;
-use std::hash::pedersen_hash;
+use poseidon::poseidon2;         // @dev - Poseidon Hash
+//use std::hash::pedersen_hash;  // @dev - Pedersen Hash function
+
 
 // Private Inputs
 // - User balances
@@ -32,10 +34,12 @@ fn test_main_valid_yield_proof() {
     let merkle_inclusion_proof: Field = 0;
     
     // @dev - Calculate expected leaf hash
-    let expected_leaf_hash = pedersen_hash([user_address, user_balance as Field, optional_kyc_commitment]);
+    let inputs = [user_address, user_balance as Field, optional_kyc_commitment];
+    let expected_leaf_hash = poseidon2::Poseidon2::hash(inputs, inputs.len());
+    //let expected_leaf_hash = pedersen_hash([user_address, user_balance as Field, optional_kyc_commitment]);
     
     // @dev - Public inputs
-    let balance_root: u64 = user_balance; // Simplified for test
+    let current_balance_root: Field = 0x1234; // Simplified for test
     let total_yield: u64 = user_yield + 1000; // Total yield should be >= user_yield
     
 
@@ -49,7 +53,7 @@ fn test_main_valid_yield_proof() {
         optional_kyc_commitment,
         merkle_inclusion_proof,
         expected_leaf_hash,
-        balance_root,
+        current_balance_root,
         yield_rate,
         epoch_start,
         epoch_end,
@@ -82,9 +86,12 @@ fn test_main_with_zero_yield() {
     let optional_kyc_commitment: Field = 0xABCDEF;
     let merkle_inclusion_proof: Field = 0;
     
-    let expected_leaf_hash = pedersen_hash([user_address, user_balance as Field, optional_kyc_commitment]);
+    // @dev - Calculate expected leaf hash
+    let inputs = [user_address, user_balance as Field, optional_kyc_commitment];
+    let expected_leaf_hash = poseidon2::Poseidon2::hash(inputs, inputs.len());
+    //let expected_leaf_hash = pedersen_hash([user_address, user_balance as Field, optional_kyc_commitment]);
     
-    let balance_root: u64 = user_balance;
+    let current_balance_root: Field = 0x1234; // Simplified for test
     let total_yield: u64 = 0;
     
     let (leaf_hash, new_merkle_root) = main(
@@ -96,7 +103,7 @@ fn test_main_with_zero_yield() {
         optional_kyc_commitment,
         merkle_inclusion_proof,
         expected_leaf_hash,
-        balance_root,
+        current_balance_root,
         yield_rate,
         epoch_start,
         epoch_end,
@@ -124,9 +131,12 @@ fn test_main_max_yield_conservation() {
     let optional_kyc_commitment: Field = 0xDEADBEEF;
     let merkle_inclusion_proof: Field = 0;
     
-    let expected_leaf_hash = pedersen_hash([user_address, user_balance as Field, optional_kyc_commitment]);
+    // @dev - Calculate expected leaf hash
+    let inputs = [user_address, user_balance as Field, optional_kyc_commitment];
+    let expected_leaf_hash = poseidon2::Poseidon2::hash(inputs, inputs.len());
+    //let expected_leaf_hash = pedersen_hash([user_address, user_balance as Field, optional_kyc_commitment]);
     
-    let balance_root: u64 = user_balance;
+    let current_balance_root: Field = 0x1234; // Simplified for test
     let total_yield: u64 = user_yield; // Exactly equal
     
     let (leaf_hash, new_merkle_root) = main(
@@ -138,7 +148,7 @@ fn test_main_max_yield_conservation() {
         optional_kyc_commitment,
         merkle_inclusion_proof,
         expected_leaf_hash,
-        balance_root,
+        current_balance_root,
         yield_rate,
         epoch_start,
         epoch_end,
@@ -166,9 +176,12 @@ fn test_main_fails_kyc_not_eligible() {
     let optional_kyc_commitment: Field = 0x12345;
     let merkle_inclusion_proof: Field = 0;
     
-    let expected_leaf_hash = pedersen_hash([user_address, user_balance as Field, optional_kyc_commitment]);
+    // @dev - Calculate expected leaf hash
+    let inputs = [user_address, user_balance as Field, optional_kyc_commitment];
+    let expected_leaf_hash = poseidon2::Poseidon2::hash(inputs, inputs.len());
+    //let expected_leaf_hash = pedersen_hash([user_address, user_balance as Field, optional_kyc_commitment]);
     
-    let balance_root: u64 = user_balance;
+    let current_balance_root: Field = 0x1234; // Simplified for test
     let total_yield: u64 = user_yield + 1000;
     
     // This should fail due to KYC constraint
@@ -181,7 +194,7 @@ fn test_main_fails_kyc_not_eligible() {
         optional_kyc_commitment,
         merkle_inclusion_proof,
         expected_leaf_hash,
-        balance_root,
+        current_balance_root,
         yield_rate,
         epoch_start,
         epoch_end,
@@ -206,9 +219,12 @@ fn test_main_fails_yield_exceeds_total() {
     let optional_kyc_commitment: Field = 0x54321;
     let merkle_inclusion_proof: Field = 0;
     
-    let expected_leaf_hash = pedersen_hash([user_address, user_balance as Field, optional_kyc_commitment]);
+    // @dev - Calculate expected leaf hash
+    let inputs = [user_address, user_balance as Field, optional_kyc_commitment];
+    let expected_leaf_hash = poseidon2::Poseidon2::hash(inputs, inputs.len());
+    //let expected_leaf_hash = pedersen_hash([user_address, user_balance as Field, optional_kyc_commitment]);
     
-    let balance_root: u64 = user_balance;
+    let current_balance_root: Field = 0x1234; // Simplified for test
     let total_yield: u64 = user_yield - 1; // Total yield less than user yield
     
     // This should fail due to conservation constraint
@@ -221,7 +237,7 @@ fn test_main_fails_yield_exceeds_total() {
         optional_kyc_commitment,
         merkle_inclusion_proof,
         expected_leaf_hash,
-        balance_root,
+        current_balance_root,
         yield_rate,
         epoch_start,
         epoch_end,
@@ -246,9 +262,12 @@ fn test_main_fails_incorrect_yield_calculation() {
     let optional_kyc_commitment: Field = 0x67890;
     let merkle_inclusion_proof: Field = 0;
     
-    let expected_leaf_hash = pedersen_hash([user_address, user_balance as Field, optional_kyc_commitment]);
+    // @dev - Calculate expected leaf hash
+    let inputs = [user_address, user_balance as Field, optional_kyc_commitment];
+    let expected_leaf_hash = poseidon2::Poseidon2::hash(inputs, inputs.len());
+    //let expected_leaf_hash = pedersen_hash([user_address, user_balance as Field, optional_kyc_commitment]);
     
-    let balance_root: u64 = user_balance;
+    let current_balance_root: Field = 0x1234; // Simplified for test
     let total_yield: u64 = 1000000;
     
     // This should fail due to incorrect yield formula
@@ -261,7 +280,7 @@ fn test_main_fails_incorrect_yield_calculation() {
         optional_kyc_commitment,
         merkle_inclusion_proof,
         expected_leaf_hash,
-        balance_root,
+        current_balance_root,
         yield_rate,
         epoch_start,
         epoch_end,
@@ -288,7 +307,7 @@ fn test_main_fails_wrong_leaf_hash() {
     
     let expected_leaf_hash: Field = 0x1234567890; // Wrong hash
     
-    let balance_root: u64 = user_balance;
+    let current_balance_root: Field = 0x1234; // Simplified for test
     let total_yield: u64 = user_yield + 500;
     
     // This should fail due to leaf hash mismatch
@@ -301,7 +320,7 @@ fn test_main_fails_wrong_leaf_hash() {
         optional_kyc_commitment,
         merkle_inclusion_proof,
         expected_leaf_hash,
-        balance_root,
+        current_balance_root,
         yield_rate,
         epoch_start,
         epoch_end,

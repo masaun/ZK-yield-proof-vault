@@ -1,9 +1,12 @@
 use trees::merkle::MerkleTree; // @dev - Merkle Tree (https://github.com/zk-kit/zk-kit.noir/tree/main/packages/merkle-trees)
 use trees::types::{MT_Creator, Modifier, MembershipProver};
-use std::hash::pedersen_hash;
+use poseidon::poseidon2;       // @dev - Poseidon Hash
+//use std::hash::pedersen_hash;
 
 pub fn hasher(leaves: [Field; 2]) -> Field {
-    pedersen_hash(leaves)
+    let hash = poseidon2::Poseidon2::hash(leaves, leaves.len());
+    //let hash = pedersen_hash(leaves)
+    hash
 }
 
 pub fn update_merkle_tree(entry: Field, merkle_root: Field, paths: [Field; 0]) -> Field {
