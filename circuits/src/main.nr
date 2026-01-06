@@ -40,6 +40,8 @@ fn main(
     epoch_end: pub u64,   // @dev - block.number at the end of the epoch
     latest_total_yield: pub u64,
     expected_nullifier: pub Field
+
+    //rwa_certificate: pub Field         // @dev - Hash of RWA certificate
 ) -> pub (Field, Field) {
     // @dev - Hash
     let inputs = [user_address, latest_user_balance as Field, latest_block_number as Field]; // @dev - [TODO]: Add a salt value for better security
