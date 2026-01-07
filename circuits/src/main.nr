@@ -41,11 +41,11 @@ fn main(
     latest_total_yield: pub u64,
     expected_nullifier: pub Field
 
-    //rwa_certificate: pub Field       // @dev - Hash of RWA certificate
+    //rwa_certificate: pub Field       // @dev - Hash of RWA certificate, which is signed by an trusted authority.
 ) -> pub (Field, Field) {
     // @dev - Hash
-    let inputs = [user_address, latest_user_balance as Field, latest_block_number as Field]; // @dev - [TODO]: Add a salt value for better security
-    let latest_user_balance_leaf = poseidon2::Poseidon2::hash(inputs, inputs.len());
+    let inputs_for_leaf = [user_address, latest_user_balance as Field, latest_block_number as Field]; // @dev - [TODO]: Add a salt value for better security
+    let latest_user_balance_leaf = poseidon2::Poseidon2::hash(inputs_for_leaf, inputs_for_leaf.len());
 
     // @dev - Update the Merkle tree with the user's balance and retrieve the new Merkle root of the user balances as the return value
     let latest_user_balance_root = update_merkle_tree(latest_user_balance_leaf, last_user_balance_root, []);

@@ -9,12 +9,6 @@ use crate::{
 use poseidon::poseidon2;         // @dev - Poseidon Hash
 //use std::hash::pedersen_hash;  // @dev - Pedersen Hash function
 
-// use libs::{
-//     merkle_tree_manager::{
-//         update_merkle_tree
-//     }
-// };
-
 
 // Private Inputs
 // - User balances
