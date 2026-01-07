@@ -1,6 +1,19 @@
-use crate::main;
+use crate::{
+    main,
+    libs::{
+        merkle_tree_manager::{
+            update_merkle_tree
+        }
+    }
+};
 use poseidon::poseidon2;         // @dev - Poseidon Hash
 //use std::hash::pedersen_hash;  // @dev - Pedersen Hash function
+
+// use libs::{
+//     merkle_tree_manager::{
+//         update_merkle_tree
+//     }
+// };
 
 
 // Private Inputs
@@ -39,9 +52,8 @@ fn test_main_valid_yield_proof() {
     let last_user_balance_root: Field = 0x1234; // Simplified for test
     let latest_total_yield: u64 = latest_user_yield + 1000; // Total yield should be >= user_yield
     
-    // @dev - Calculate expected merkle root and nullifier
-    let inputs_merkle = [latest_user_balance_leaf, last_user_balance_root];
-    let expected_latest_user_balance_root = poseidon2::Poseidon2::hash(inputs_merkle, inputs_merkle.len());
+    // @dev - Calculate an expected merkle root of the latest user balance
+    let expected_latest_user_balance_root = update_merkle_tree(latest_user_balance_leaf, last_user_balance_root, []);
     
     let inputs_nullifier = [user_address, latest_block_number as Field, latest_user_balance_leaf, expected_latest_user_balance_root];
     let expected_nullifier = poseidon2::Poseidon2::hash(inputs_nullifier, inputs_nullifier.len());
@@ -94,10 +106,9 @@ fn test_main_with_zero_yield() {
     let last_user_balance_root: Field = 0x1234; // Simplified for test
     let latest_total_yield: u64 = 0;
     
-    // @dev - Calculate expected merkle root and nullifier
-    let inputs_merkle = [latest_user_balance_leaf, last_user_balance_root];
-    let expected_latest_user_balance_root = poseidon2::Poseidon2::hash(inputs_merkle, inputs_merkle.len());
-    
+    // @dev - Calculate an expected merkle root of the latest user balance
+    let expected_latest_user_balance_root = update_merkle_tree(latest_user_balance_leaf, last_user_balance_root, []);
+  
     let inputs_nullifier = [user_address, latest_block_number as Field, latest_user_balance_leaf, expected_latest_user_balance_root];
     let expected_nullifier = poseidon2::Poseidon2::hash(inputs_nullifier, inputs_nullifier.len());
     
@@ -143,10 +154,9 @@ fn test_main_max_yield_conservation() {
     let last_user_balance_root: Field = 0x1234; // Simplified for test
     let latest_total_yield: u64 = latest_user_yield; // Exactly equal
     
-    // @dev - Calculate expected merkle root and nullifier
-    let inputs_merkle = [latest_user_balance_leaf, last_user_balance_root];
-    let expected_latest_user_balance_root = poseidon2::Poseidon2::hash(inputs_merkle, inputs_merkle.len());
-    
+    // @dev - Calculate an expected merkle root of the latest user balance
+    let expected_latest_user_balance_root = update_merkle_tree(latest_user_balance_leaf, last_user_balance_root, []);
+
     let inputs_nullifier = [user_address, latest_block_number as Field, latest_user_balance_leaf, expected_latest_user_balance_root];
     let expected_nullifier = poseidon2::Poseidon2::hash(inputs_nullifier, inputs_nullifier.len());
     
@@ -192,10 +202,9 @@ fn test_main_fails_kyc_not_eligible() {
     let last_user_balance_root: Field = 0x1234; // Simplified for test
     let latest_total_yield: u64 = latest_user_yield + 1000;
     
-    // @dev - Calculate expected merkle root and nullifier
-    let inputs_merkle = [latest_user_balance_leaf, last_user_balance_root];
-    let expected_latest_user_balance_root = poseidon2::Poseidon2::hash(inputs_merkle, inputs_merkle.len());
-    
+    // @dev - Calculate an expected merkle root of the latest user balance
+    let expected_latest_user_balance_root = update_merkle_tree(latest_user_balance_leaf, last_user_balance_root, []);
+  
     let inputs_nullifier = [user_address, latest_block_number as Field, latest_user_balance_leaf, expected_latest_user_balance_root];
     let expected_nullifier = poseidon2::Poseidon2::hash(inputs_nullifier, inputs_nullifier.len());
     
@@ -237,10 +246,9 @@ fn test_main_fails_yield_exceeds_total() {
     
     let last_user_balance_root: Field = 0x1234; // Simplified for test
     let latest_total_yield: u64 = latest_user_yield - 1; // Total yield less than user yield
-    
-    // @dev - Calculate expected merkle root and nullifier
-    let inputs_merkle = [latest_user_balance_leaf, last_user_balance_root];
-    let expected_latest_user_balance_root = poseidon2::Poseidon2::hash(inputs_merkle, inputs_merkle.len());
+
+    // @dev - Calculate an expected merkle root of the latest user balance
+    let expected_latest_user_balance_root = update_merkle_tree(latest_user_balance_leaf, last_user_balance_root, []);
     
     let inputs_nullifier = [user_address, latest_block_number as Field, latest_user_balance_leaf, expected_latest_user_balance_root];
     let expected_nullifier = poseidon2::Poseidon2::hash(inputs_nullifier, inputs_nullifier.len());
@@ -284,9 +292,8 @@ fn test_main_fails_incorrect_yield_calculation() {
     let last_user_balance_root: Field = 0x1234; // Simplified for test
     let latest_total_yield: u64 = 1000000;
     
-    // @dev - Calculate expected merkle root and nullifier
-    let inputs_merkle = [latest_user_balance_leaf, last_user_balance_root];
-    let expected_latest_user_balance_root = poseidon2::Poseidon2::hash(inputs_merkle, inputs_merkle.len());
+    // @dev - Calculate an expected merkle root of the latest user balance
+    let expected_latest_user_balance_root = update_merkle_tree(latest_user_balance_leaf, last_user_balance_root, []);
     
     let inputs_nullifier = [user_address, latest_block_number as Field, latest_user_balance_leaf, expected_latest_user_balance_root];
     let expected_nullifier = poseidon2::Poseidon2::hash(inputs_nullifier, inputs_nullifier.len());
