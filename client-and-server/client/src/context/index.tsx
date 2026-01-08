@@ -11,9 +11,9 @@ const queryClient = new QueryClient()
 
 // Set up metadata
 const metadata = {
-  name: 'next-reown-appkit',
-  description: 'next-reown-appkit',
-  url: 'https://github.com/0xonerb/next-reown-appkit-ssr', // origin must match your domain & subdomain
+  name: 'ZK Yield Proof Vault',
+  description: 'Privacy-Preserving Yield Distribution on Mantle using Zero-Knowledge Proofs',
+  url: 'https://zk-yield-vault.vercel.app',
   icons: ['https://avatars.githubusercontent.com/u/179229932']
 }
 
