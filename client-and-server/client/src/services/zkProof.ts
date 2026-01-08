@@ -1,6 +1,7 @@
 import { Noir } from '@noir-lang/noir_js';
 import { UltraHonkBackend } from '@aztec/bb.js';
 import type { CompiledCircuit } from '@noir-lang/types';
+import { poseidon1 } from 'poseidon-lite';
 import circuitData from '../../circuits/zk-yield-proof-vault-0.0.1/zk-yield-proof-vault.json';
 
 const circuit = circuitData as unknown as CompiledCircuit;
@@ -28,6 +29,17 @@ export interface ProofInputs {
 export interface ProofOutput {
   proof: Uint8Array;
   publicInputs: string[];
+}
+
+/**
+ * Generate a nullifier from a secret using Poseidon hash
+ * This ensures the nullifier is ZK-friendly and deterministic
+ */
+export function generateNullifier(secret: string): bigint {
+  // Convert secret string to bigint
+  const secretBigInt = BigInt('0x' + Buffer.from(secret).toString('hex'));
+  // Hash with Poseidon to get nullifier
+  return poseidon1([secretBigInt]);
 }
 
 /**
@@ -96,59 +108,6 @@ export async function verifyYieldProof(proof: Uint8Array, publicInputs: string[]
 }
 
 /**
- * Generate a nullifier from a secret
- * This should be a deterministic hash of the secret
- */
-export function generateNullifier(secret: string): string {
-  // In production, use a proper hash function
-  // For now, we'll use a simple approach
-  const encoder = new TextEncoder();
-  const data = encoder.encode(secret);
-  
-  // This is a placeholder - in production use a proper hash
-  return `0x${Array.from(data)
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('')
-    .padStart(64, '0')
-    .slice(0, 64)}`;
-}
-
-/**
- * Calculate Merkle root from balance and path
- */
-export function calculateMerkleRoot(
-  balance: string,
-  path: string[],
-  index: string
-): string {
-  // This is a simplified version
-  // In production, implement proper Merkle tree calculation
-  let current = balance;
-  const indexBits = BigInt(index).toString(2).padStart(path.length, '0');
-  
-  for (let i = 0; i < path.length; i++) {
-    const sibling = path[i];
-    const isLeft = indexBits[path.length - 1 - i] === '0';
-    
-    // Simplified hash - in production use proper hash function
-    current = isLeft 
-      ? hashPair(current, sibling)
-      : hashPair(sibling, current);
-  }
-  
-  return current;
-}
-
-/**
- * Simple hash pair function (placeholder)
- */
-function hashPair(left: string, right: string): string {
-  // In production, use a proper hash function like Poseidon or Pedersen
-  const combined = BigInt(left) + BigInt(right);
-  return combined.toString();
-}
-
-/**
  * Format proof for contract submission
  */
 export function formatProofForContract(proofOutput: ProofOutput): {
@@ -160,7 +119,7 @@ export function formatProofForContract(proofOutput: ProofOutput): {
     .map(b => b.toString(16).padStart(2, '0'))
     .join('')}` as `0x${string}`;
   
-  // Convert public inputs to hex strings
+  // Convert public inputs to hex strings (as bytes32)
   const publicInputsHex = proofOutput.publicInputs.map(input => {
     const bigIntValue = BigInt(input);
     const hex = bigIntValue.toString(16).padStart(64, '0');

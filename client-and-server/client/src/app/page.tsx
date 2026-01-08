@@ -3,6 +3,7 @@ import { VaultStats } from "@/components/VaultStats";
 import { DepositForm } from "@/components/DepositForm";
 import { ClaimYieldForm } from "@/components/ClaimYieldForm";
 import { EpochList } from "@/components/EpochList";
+import { MerkleTreeHelper } from "@/components/MerkleTreeHelper";
 import Image from 'next/image';
 
 export default function Home() {
@@ -70,12 +71,15 @@ export default function Home() {
         <ClaimYieldForm />
       </div>
 
+      <MerkleTreeHelper />
+
       <div className="advice">
         <p>
           <strong>Note:</strong> Make sure you&apos;re connected to Mantle Mainnet or Mantle Sepolia Testnet.
         </p>
         <p>
-          This project uses Zero-Knowledge proofs powered by Noir to enable privacy-preserving yield distribution.
+          This project uses <strong>ZK-Kit</strong> for Merkle tree operations and <strong>Noir</strong> for 
+          zero-knowledge proofs to enable privacy-preserving yield distribution.
         </p>
       </div>
     </div>

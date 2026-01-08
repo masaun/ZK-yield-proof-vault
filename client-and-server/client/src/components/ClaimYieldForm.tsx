@@ -4,12 +4,13 @@ import { useState } from 'react';
 import { useYieldVault, useEpochData, useHasClaimedEpoch } from '@/hooks/useYieldVault';
 import { useZKProof } from '@/hooks/useZKProof';
 import { useAccount } from 'wagmi';
+import { generateNullifier } from '@/services/zkProof';
 import type { ProofInputs } from '@/services/zkProof';
 
 export function ClaimYieldForm() {
   const [epochId, setEpochId] = useState('');
   const [nullifierSecret, setNullifierSecret] = useState('');
-  const [merklePath, setMerklePath] = useState('');
+  const [merkleSiblings, setMerkleSiblings] = useState('');
   const [merkleIndex, setMerkleIndex] = useState('0');
   const [step, setStep] = useState<'input' | 'generating' | 'claiming'>('input');
   
@@ -52,14 +53,18 @@ export function ClaimYieldForm() {
       // Step 1: Generate proof
       setStep('generating');
       
-      const merklePathArray = merklePath
+      // Parse Merkle siblings (ZK-Kit format)
+      const siblingsArray = merkleSiblings
         .split(',')
-        .map(p => p.trim())
-        .filter(p => p.length > 0);
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+
+      // Generate nullifier from secret using Poseidon
+      const nullifier = generateNullifier(nullifierSecret);
 
       const proofInputs: ProofInputs = {
         user_balance: userBalance.toString(),
-        user_balance_merkle_path: merklePathArray,
+        user_balance_merkle_path: siblingsArray,
         user_balance_merkle_index: merkleIndex,
         epoch_start: epochData[1].toString(), // startBlock
         epoch_end: epochData[2].toString(),   // endBlock
@@ -67,7 +72,7 @@ export function ClaimYieldForm() {
         yield_rate: epochData[4].toString(),  // totalYield (using as rate for now)
         expected_latest_user_balance_root: epochData[5], // balanceRoot
         latest_total_yield: epochData[4].toString(),
-        nullifier_secret: nullifierSecret,
+        nullifier_secret: nullifier.toString(),
       };
 
       await generateProof(proofInputs);
@@ -90,7 +95,7 @@ export function ClaimYieldForm() {
       if (isConfirmed) {
         setEpochId('');
         setNullifierSecret('');
-        setMerklePath('');
+        setMerkleSiblings('');
         setMerkleIndex('0');
         setStep('input');
         await refetchBalance();
@@ -158,16 +163,17 @@ export function ClaimYieldForm() {
         </div>
 
         <div className="form-group">
-          <label htmlFor="merklePath">Merkle Path (comma-separated)</label>
+          <label htmlFor="merkleSiblings">Merkle Siblings (comma-separated)</label>
           <textarea
-            id="merklePath"
-            value={merklePath}
-            onChange={(e) => setMerklePath(e.target.value)}
-            placeholder="0x..., 0x..., 0x..."
+            id="merkleSiblings"
+            value={merkleSiblings}
+            onChange={(e) => setMerkleSiblings(e.target.value)}
+            placeholder="123456..., 789012..., 345678..."
             disabled={step !== 'input'}
             rows={3}
             required
           />
+          <small>Enter the Merkle proof siblings from ZK-Kit (bigint values)</small>
         </div>
 
         <div className="form-group">
@@ -189,7 +195,7 @@ export function ClaimYieldForm() {
             step !== 'input' || 
             !epochId || 
             !nullifierSecret || 
-            !merklePath ||
+            !merkleSiblings ||
             hasClaimed
           }
         >
@@ -218,15 +224,17 @@ export function ClaimYieldForm() {
       </form>
 
       <div className="claim-info">
-        <h3>How it works:</h3>
+        <h3>How it works (using ZK-Kit):</h3>
         <ol>
           <li>Enter the epoch ID you want to claim yield for</li>
-          <li>Provide a unique nullifier secret (prevents double-claiming)</li>
-          <li>Enter your Merkle proof data (path and index)</li>
+          <li>Provide a unique nullifier secret (hashed with Poseidon)</li>
+          <li>Enter your Merkle proof siblings from ZK-Kit LeanIMT</li>
           <li>Click to generate ZK proof and claim your yield</li>
         </ol>
         <p className="note">
-          Note: The ZK proof ensures privacy while proving you&apos;re entitled to the yield.
+          <strong>ZK-Kit Integration:</strong> This app uses ZK-Kit&apos;s LeanIMT for Merkle tree operations 
+          and Poseidon hash for ZK-friendly cryptography. The Merkle proof ensures your balance is included 
+          in the epoch snapshot while maintaining privacy.
         </p>
       </div>
     </div>

@@ -75,6 +75,7 @@ Visit [http://localhost:3000](http://localhost:3000)
 - **Wallet Connection**: Reown AppKit (WalletConnect)
 - **Blockchain Interaction**: Wagmi + Viem
 - **ZK Proofs**: Noir.js + bb.js (Barretenberg)
+- **Merkle Trees**: ZK-Kit (LeanIMT + Poseidon)
 
 ### Key Components
 
@@ -83,6 +84,8 @@ Visit [http://localhost:3000](http://localhost:3000)
 - `VaultStats.tsx` - Display vault statistics and user balance
 - `DepositForm.tsx` - Deposit MNT into the vault
 - `ClaimYieldForm.tsx` - Generate ZK proof and claim yield
+- `EpochList.tsx` - Display available epochs
+- `MerkleTreeHelper.tsx` - Interactive tool to generate Merkle proofs using ZK-Kit
 
 #### `/src/hooks/`
 - `useYieldVault.ts` - Contract interaction hooks for the vault
@@ -92,6 +95,50 @@ Visit [http://localhost:3000](http://localhost:3000)
 - `zkProof.ts` - Core ZK proof generation logic using Noir and bb.js
 
 #### `/src/contracts/`
+
+#### `/src/utils/`
+- `merkleTree.ts` - ZK-Kit based Merkle tree utilities (LeanIMT + Poseidon)
+
+## ZK-Kit Integration
+
+This project uses **[ZK-Kit](https://github.com/zk-kit/zk-kit)** for ZK-friendly Merkle tree operations:
+
+### Features
+- **LeanIMT**: Lean Incremental Merkle Tree optimized for browser environments
+- **Poseidon Hash**: SNARK-friendly hash function for efficient ZK circuits
+- **Proof Generation**: Generate and verify Merkle inclusion proofs
+- **Circuit Compatible**: Outputs compatible with Noir circuits
+
+### Merkle Tree Operations
+
+```typescript
+import { buildMerkleTree, generateMerkleProof } from '@/utils/merkleTree';
+
+// Build tree from user balances
+const balances = [
+  { address: '0x...', balance: 1000n },
+  { address: '0x...', balance: 2000n },
+];
+
+const { tree, root } = buildMerkleTree(balances);
+
+// Generate proof for a user
+const proof = generateMerkleProof(balances, userAddress);
+
+// Use proof in circuit
+const { siblings, index, leaf, root } = proof;
+```
+
+### Interactive Merkle Tree Helper
+
+The app includes an interactive **Merkle Tree Helper** component that allows you to:
+1. Add user balances
+2. Generate Merkle tree and root using ZK-Kit's LeanIMT
+3. Create Merkle proofs for any user
+4. Verify proofs on-chain
+5. Copy proof data for the claim form
+
+This tool is perfect for testing and understanding how Merkle proofs work!
 - `YieldVault.abi.ts` - Contract ABI
 - `addresses.ts` - Contract addresses for different networks
 
