@@ -41,7 +41,7 @@ The relayer service:
 
 4. **Run with Docker Compose**:
    ```bash
-   docker-compose up -d
+   docker compose up -d
    ```
 
 ### Option 2: Build from Source
