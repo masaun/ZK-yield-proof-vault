@@ -23,7 +23,7 @@ export const rarimoConfig = {
 
   // Rarimo verificator service
   verificator: {
-    url: process.env.NEXT_PUBLIC_RARIMO_VERIFICATOR_URL || 'https://api.verificator.rarimo.com',
+    url: process.env.NEXT_PUBLIC_RARIMO_VERIFICATOR_URL || 'https://api.app.rarime.com',
   },
 } as const;
 

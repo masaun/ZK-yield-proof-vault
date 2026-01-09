@@ -4,6 +4,8 @@ import { DepositForm } from "@/components/DepositForm";
 import { ClaimYieldForm } from "@/components/ClaimYieldForm";
 import { EpochList } from "@/components/EpochList";
 import { MerkleTreeHelper } from "@/components/MerkleTreeHelper";
+import { RarimoZkPassportConnect } from "@/components/RarimoZkPassportConnect";
+import { RarimoVerificationStatus } from "@/components/RarimoVerificationStatus";
 import Image from 'next/image';
 
 export default function Home() {
@@ -16,6 +18,11 @@ export default function Home() {
       </div>
 
       <ConnectButton />
+
+      {/* Rarimo ZK Passport Integration */}
+      <RarimoZkPassportConnect />
+      
+      <RarimoVerificationStatus />
 
       <div className="user-flow-diagram">
         <h3>User Flow</h3>
