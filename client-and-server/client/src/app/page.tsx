@@ -4,6 +4,8 @@ import { DepositForm } from "@/components/DepositForm";
 import { ClaimYieldForm } from "@/components/ClaimYieldForm";
 import { EpochList } from "@/components/EpochList";
 import { MerkleTreeHelper } from "@/components/MerkleTreeHelper";
+import { RarimoZkPassportConnect } from "@/components/RarimoZkPassportConnect";
+import { RarimoVerificationStatus } from "@/components/RarimoVerificationStatus";
 import Image from 'next/image';
 
 export default function Home() {
@@ -17,54 +19,62 @@ export default function Home() {
 
       <ConnectButton />
 
-      <div className="user-flow-diagram">
-        <h3>User Flow</h3>
-        <div className="flow-steps">
-          <div className="flow-step">
-            <div className="step-number">1</div>
-            <div className="step-content">
-              <strong>Deposit</strong>
-              <p>Users deposit MNT to Yield Vault</p>
+      {/* Rarimo ZK Passport Integration */}
+      <RarimoZkPassportConnect />
+      
+      <RarimoVerificationStatus />
+
+      {/* Three-column layout for User Flow, Vault Stats, and Epochs */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '40px' }}>
+        <div className="user-flow-diagram">
+          <h3>User Flow</h3>
+          <div className="flow-steps">
+            <div className="flow-step">
+              <div className="step-number">1</div>
+              <div className="step-content">
+                <strong>Deposit</strong>
+                <p>Users deposit MNT to Yield Vault</p>
+              </div>
             </div>
-          </div>
-          <div className="flow-arrow">↓</div>
-          <div className="flow-step">
-            <div className="step-number">2</div>
-            <div className="step-content">
-              <strong>Epoch Snapshot</strong>
-              <p>Contract takes snapshot of balances</p>
+            <div className="flow-arrow">↓</div>
+            <div className="flow-step">
+              <div className="step-number">2</div>
+              <div className="step-content">
+                <strong>Epoch Snapshot</strong>
+                <p>Contract takes snapshot of balances</p>
+              </div>
             </div>
-          </div>
-          <div className="flow-arrow">↓</div>
-          <div className="flow-step">
-            <div className="step-number">3</div>
-            <div className="step-content">
-              <strong>ZK Proof Generation</strong>
-              <p>Off-chain prover generates proof using Noir</p>
+            <div className="flow-arrow">↓</div>
+            <div className="flow-step">
+              <div className="step-number">3</div>
+              <div className="step-content">
+                <strong>ZK Proof Generation</strong>
+                <p>Off-chain prover generates proof using Noir</p>
+              </div>
             </div>
-          </div>
-          <div className="flow-arrow">↓</div>
-          <div className="flow-step">
-            <div className="step-number">4</div>
-            <div className="step-content">
-              <strong>Verification</strong>
-              <p>Contract verifies ZK proof on Mantle</p>
+            <div className="flow-arrow">↓</div>
+            <div className="flow-step">
+              <div className="step-number">4</div>
+              <div className="step-content">
+                <strong>Verification</strong>
+                <p>Contract verifies ZK proof on Mantle</p>
+              </div>
             </div>
-          </div>
-          <div className="flow-arrow">↓</div>
-          <div className="flow-step">
-            <div className="step-number">5</div>
-            <div className="step-content">
-              <strong>Claim Yield</strong>
-              <p>User receives yield privately</p>
+            <div className="flow-arrow">↓</div>
+            <div className="flow-step">
+              <div className="step-number">5</div>
+              <div className="step-content">
+                <strong>Claim Yield</strong>
+                <p>User receives yield privately</p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <VaultStats />
-      
-      <EpochList />
+        <VaultStats />
+        
+        <EpochList />
+      </div>
       
       <div className="forms-container">
         <DepositForm />

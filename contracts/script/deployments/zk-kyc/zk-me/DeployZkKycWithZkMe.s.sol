@@ -2,7 +2,7 @@
 pragma solidity ^0.8.17;
 
 import "forge-std/Script.sol";
-import "../src/zk-kyc/zk-me/ZkKycWithZkMe.sol";
+import "../../../../src/zk-kyc/zk-me/ZkKycWithZkMe.sol";
 
 /**
  * @title DeployZkKycWithZkMe

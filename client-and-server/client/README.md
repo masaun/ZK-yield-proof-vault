@@ -49,9 +49,27 @@ NEXT_PUBLIC_VERIFIER_ADDRESS_MAINNET=0x...
 # Mantle Sepolia Testnet Contracts
 NEXT_PUBLIC_VAULT_ADDRESS_TESTNET=0x...
 NEXT_PUBLIC_VERIFIER_ADDRESS_TESTNET=0x...
+
+# Rarimo ZK Passport Integration
+# Rarimo Verificator Service (for generating ZK Passport proofs)
+NEXT_PUBLIC_RARIMO_VERIFICATOR_URL=https://api.app.rarime.com
+
+# Rarimo Relayer API URLs (for cross-chain state replication)
+NEXT_PUBLIC_RELAYER_API_URL_MAINNET=http://localhost:8080
+NEXT_PUBLIC_RELAYER_API_URL_TESTNET=http://localhost:8080
+
+# Rarimo Contract Addresses on Mantle Mainnet
+NEXT_PUBLIC_MAINNET_REGISTRATION_SMT_REPLICATOR_ADDRESS=0x...
+NEXT_PUBLIC_MAINNET_ZK_KYC_RARIMO_ADDRESS=0x...
+
+# Rarimo Contract Addresses on Mantle Sepolia Testnet
+NEXT_PUBLIC_TESTNET_REGISTRATION_SMT_REPLICATOR_ADDRESS=0x...
+NEXT_PUBLIC_TESTNET_ZK_KYC_RARIMO_ADDRESS=0x...
 ```
 
 Get your WalletConnect Project ID from: https://dashboard.reown.com
+
+For Rarimo integration setup, see the [Rarimo ZK Passport Integration](#rarimo-zk-passport-integration) section below.
 
 ### Development
 
@@ -174,3 +192,197 @@ await claimYield(epochId, proof, publicInputs);
 - [Mantle Network](https://www.mantle.xyz/)
 - [Reown (WalletConnect)](https://reown.com/)
 - [Wagmi Documentation](https://wagmi.sh/)
+
+## Rarimo ZK Passport Integration
+
+This application integrates **Rarimo's ZK Passport** for privacy-preserving identity verification on Mantle. Users can verify their identity using their physical passport without revealing sensitive personal information.
+
+### Features
+
+- **QR Code-Based Verification**: Scan a QR code with the Rarimo mobile app to initiate verification
+- **Cross-Chain State Replication**: Automatically sync ZK Passport registry state from Rarimo L2 to Mantle
+- **On-Chain Verification**: Verify ZK proofs directly on Mantle mainnet or testnet
+- **Verification Status Dashboard**: Real-time display of verification status and state replication
+
+### How It Works
+
+1. **Connect Wallet**: Connect your wallet to Mantle mainnet or testnet
+2. **Initiate Verification**: Click "Connect Rarimo ZK Passport" button
+3. **Scan QR Code**: Open the Rarimo app and scan the displayed QR code
+4. **Generate Proof**: The app generates a zero-knowledge proof of your passport data
+5. **State Replication**: The frontend automatically submits the registration root to the Mantle chain via the relayer
+6. **On-Chain Verification**: The proof is verified on-chain, and your address is marked as verified
+
+### Components
+
+#### `RarimoZkPassportConnect`
+Main component for initiating ZK Passport verification:
+- Displays a "Connect Rarimo ZK Passport" button
+- Shows QR code modal when clicked
+- Integrates `@rarimo/zk-passport-react` package
+- Handles verification lifecycle (pending, success, error states)
+
+#### `RarimoVerificationStatus`
+Dashboard for monitoring verification and state replication:
+- Shows user verification status
+- Displays replicator contract state (latest root, total roots)
+- Manual root checking and state transition submission
+- Real-time updates every 10 seconds
+
+### Setup Instructions
+
+#### 1. Deploy Rarimo Contracts on Mantle
+
+You need to deploy two contracts:
+
+**RegistrationSMTReplicator**: Replicates the ZK Passport registry state from Rarimo L2 to Mantle
+```bash
+# See: /contracts/RARIMO_DEPLOYMENT.md
+```
+
+**TD3QueryProofVerifier** (or your custom contract): Verifies ZK proofs on-chain
+```bash
+# See: /contracts/RARIMO_IMPLEMENTATION_SUMMARY.md
+```
+
+#### 2. Set Up the Relayer
+
+The relayer service listens for ZK Passport registry updates and provides signed state data to your frontend.
+
+```bash
+cd server/rarimo-relayer
+
+# Edit config_mantle.yaml with:
+# - Your deployed RegistrationSMTReplicator address
+# - Relayer private key (must be registered as oracle in the contract)
+# - Mantle RPC URL
+
+# Run the relayer
+docker-compose up -d
+```
+
+See [server/rarimo-relayer/README.md](../../server/rarimo-relayer/README.md) for detailed setup.
+
+#### 3. Configure Environment Variables
+
+Update your `.env.local` file:
+
+```bash
+# Rarimo Verificator Service
+NEXT_PUBLIC_RARIMO_VERIFICATOR_URL=https://api.app.rarime.com
+
+# Relayer API (running locally or deployed)
+NEXT_PUBLIC_RELAYER_API_URL_MAINNET=http://localhost:8080
+NEXT_PUBLIC_RELAYER_API_URL_TESTNET=http://localhost:8080
+
+# Deployed contract addresses on Mantle
+NEXT_PUBLIC_MAINNET_REGISTRATION_SMT_REPLICATOR_ADDRESS=0x...
+NEXT_PUBLIC_MAINNET_ZK_KYC_RARIMO_ADDRESS=0x...
+
+NEXT_PUBLIC_TESTNET_REGISTRATION_SMT_REPLICATOR_ADDRESS=0x...
+NEXT_PUBLIC_TESTNET_ZK_KYC_RARIMO_ADDRESS=0x...
+```
+
+#### 4. Install Dependencies
+
+```bash
+npm install
+# This will install @rarimo/zk-passport-react and other dependencies
+```
+
+#### 5. Run the Application
+
+```bash
+npm run dev
+```
+
+Navigate to the ZK Passport section on the main page to test the integration.
+
+### Architecture
+
+```
+┌─────────────────┐
+│  Rarimo L2      │
+│  (Source SMT)   │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Relayer        │◄──── Listens for state updates
+│  (Backend)      │
+└────────┬────────┘
+         │
+         │ Provides signed state
+         ▼
+┌─────────────────┐
+│  Frontend       │
+│  (React)        │
+│  - QR Code      │◄──── User scans with Rarimo app
+│  - State Submit │
+└────────┬────────┘
+         │
+         │ Submit state transition
+         ▼
+┌─────────────────┐
+│  Mantle Chain   │
+│  - Replicator   │
+│  - Verifier     │
+└─────────────────┘
+```
+
+### API Reference
+
+#### `useRarimoRelayer` Hook
+```typescript
+const { 
+  submitStateTransition,
+  isTransitioning,
+  isSuccess,
+  error,
+  txHash 
+} = useRarimoRelayer({
+  replicatorAddress: '0x...',
+  relayerApiUrl: 'http://localhost:8080'
+});
+
+// Submit a root transition
+await submitStateTransition('0x1234...');
+```
+
+#### `getRarimoConfig` Utility
+```typescript
+const config = getRarimoConfig('mainnet' | 'testnet');
+// Returns: { 
+//   replicatorAddress, 
+//   zkKycAddress, 
+//   relayerApiUrl,
+//   verificatorUrl,
+//   sourceSMT 
+// }
+```
+
+### Troubleshooting
+
+**QR Code not displaying**:
+- Ensure `@rarimo/zk-passport-react` is installed
+- Check that the component is client-side rendered (uses `'use client'`)
+- Verify environment variables are set
+
+**State transition failing**:
+- Ensure the relayer is running and accessible
+- Check that the relayer's address is registered as an oracle in the RegistrationSMTReplicator contract
+- Verify the root exists in the relayer's database
+
+**Verification failing**:
+- Ensure the registration root has been transitioned to the Mantle chain first
+- Check that the proof parameters match the contract's expected format
+- Verify the contract addresses are correct
+
+### References
+
+- [Rarimo ZK Passport Documentation](https://docs.rarimo.com/zk-passport/)
+- [On-Chain Verification Guide](https://docs.rarimo.com/zk-passport/guide-on-chain-verification/)
+- [Cross-Chain Replication Guide](https://docs.rarimo.com/zk-passport/guide-setting-up-cross-chain-replication/)
+- [Rarimo GitHub](https://github.com/rarimo)
+- [Example Implementation](../../contracts/RARIMO_IMPLEMENTATION_SUMMARY.md)
+

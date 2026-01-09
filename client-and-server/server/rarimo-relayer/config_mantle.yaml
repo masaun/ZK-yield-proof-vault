@@ -1,0 +1,69 @@
+log:
+  level: debug
+  disable_sentry: true
+
+db:
+  url: "postgres://postgres:postgres@localhost:5432/relayer?sslmode=disable"
+
+listener:
+  addr: :8080
+
+# Network configuration for listening to Rarimo L2
+network:
+  # Rarimo L2 RPC endpoint
+  rpc: "https://rpc.rarimo.com"
+  
+  # Gas multiplier for transactions (not used in transit-state mode)
+  gas_multiplier: 1.2
+  
+  # Your oracle/relayer private key (from generated keys)
+  # IMPORTANT: Replace with your actual private key or use vault
+  private_key: "0xYOUR_ORACLE_PRIVATE_KEY_HERE"
+
+# Contract addresses
+contracts:
+  # Rarimo L2 Registration SMT contract (source)
+  register2:
+    address: "0x479F84502Db545FA8d2275372E0582425204A879"
+
+# Replicator configuration for Mantle
+replicator:
+  # Your deployed RegistrationSMTReplicator contract address on Mantle
+  # Fill this after deploying the contract
+  address: "0xYOUR_REPLICATOR_ADDRESS_ON_MANTLE"
+  
+  # Source SMT address (Rarimo L2 Registry)
+  source_smt: "0x479F84502Db545FA8d2275372E0582425204A879"
+  
+  # Root prefix for signing (must match contract)
+  root_prefix: "Rarimo root"
+
+# Pinger configuration for event listener
+pinger:
+  # Number of blocks to look back when starting
+  blocks_distance: 100
+  
+  # Timeout for RPC requests
+  timeout: 30s
+  
+  # Polling intervals
+  normal_period: 10s
+  min_abnormal_period: 5s
+  max_abnormal_period: 30s
+
+# CORS configuration
+cors:
+  allowed_origins:
+    - "*"  # Change to specific origins in production
+  allowed_methods:
+    - GET
+    - POST
+    - OPTIONS
+  allowed_headers:
+    - "*"
+
+# Optional: Vault configuration for secure key storage
+# vault:
+#   address: "https://vault.example.com"
+#   token: "your-vault-token"
+#   mount_path: "secret"
