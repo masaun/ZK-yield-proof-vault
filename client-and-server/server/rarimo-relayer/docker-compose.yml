@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: rarimo-relayer-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: relayer
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  relayer:
+    image: ghcr.io/rarimo/proof-verification-relayer:latest
+    container_name: rarimo-relayer
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - KV_VIPER_FILE=/config/config.yaml
+    volumes:
+      - ./config_mantle.yaml:/config/config.yaml:ro
+    ports:
+      - "8080:8080"
+    command: run service
+    restart: unless-stopped
+
+volumes:
+  postgres-data:

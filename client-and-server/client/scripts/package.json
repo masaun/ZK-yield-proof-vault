@@ -1,0 +1,15 @@
+{
+  "name": "rarimo-key-generator",
+  "version": "1.0.0",
+  "description": "Generate key pairs for Rarimo relayer",
+  "scripts": {
+    "generate-keys": "tsx scripts/generateRelayerKeys.ts"
+  },
+  "dependencies": {
+    "ethers": "^6.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.7.0"
+  }
+}
