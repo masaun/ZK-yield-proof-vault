@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useContractWrite, useWaitForTransaction } from 'wagmi';
+import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { parseAbiItem } from 'viem';
 
 const REGISTRATION_SMT_REPLICATOR_ABI = [
@@ -23,14 +23,10 @@ export function useRarimoRelayer({ replicatorAddress, relayerApiUrl }: UseRarimo
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { write: transitionRoot, data: txData } = useContractWrite({
-    address: replicatorAddress,
-    abi: REGISTRATION_SMT_REPLICATOR_ABI,
-    functionName: 'transitionRootWithSignature',
-  });
+  const { writeContract, data: txHash } = useWriteContract();
 
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransaction({
-    hash: txData?.hash,
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
+    hash: txHash,
   });
 
   /**
@@ -71,7 +67,10 @@ export function useRarimoRelayer({ replicatorAddress, relayerApiUrl }: UseRarimo
       const signedState = await fetchSignedState(root);
 
       // Submit transaction
-      transitionRoot({
+      writeContract({
+        address: replicatorAddress,
+        abi: REGISTRATION_SMT_REPLICATOR_ABI,
+        functionName: 'transitionRootWithSignature',
         args: [
           signedState.root as `0x${string}`,
           BigInt(signedState.timestamp),
@@ -93,6 +92,6 @@ export function useRarimoRelayer({ replicatorAddress, relayerApiUrl }: UseRarimo
     isTransitioning: isTransitioning || isConfirming,
     isSuccess,
     error,
-    txHash: txData?.hash,
+    txHash,
   };
 }

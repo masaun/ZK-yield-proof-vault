@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useContractWrite, useWaitForTransaction, useContractRead } from 'wagmi';
+import { useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
 import { parseAbiItem } from 'viem';
 import { useRarimoRelayer } from './useRarimoRelayer';
 
@@ -31,20 +31,16 @@ export function useZkPassportVerification({
 
   const relayer = useRarimoRelayer({ replicatorAddress, relayerApiUrl });
 
-  const { write: verifyPassport, data: txData } = useContractWrite({
-    address: zkKycAddress,
-    abi: ZK_KYC_RARIMO_ABI,
-    functionName: 'verifyZkPassport',
-  });
+  const { writeContract, data: txHash } = useWriteContract();
 
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransaction({
-    hash: txData?.hash,
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
+    hash: txHash,
   });
 
   /**
    * Check if a user is verified
    */
-  const { data: isUserVerified, refetch: checkVerification } = useContractRead({
+  const { data: isUserVerified, refetch: checkVerification } = useReadContract({
     address: zkKycAddress,
     abi: ZK_KYC_RARIMO_ABI,
     functionName: 'isVerified',
@@ -71,7 +67,10 @@ export function useZkPassportVerification({
 
       // Step 2: Submit the verification transaction
       console.log('Submitting verification transaction...');
-      verifyPassport({
+      writeContract({
+        address: zkKycAddress,
+        abi: ZK_KYC_RARIMO_ABI,
+        functionName: 'verifyZkPassport',
         args: [
           registrationRoot as `0x${string}`,
           nullifier as `0x${string}`,
@@ -93,7 +92,7 @@ export function useZkPassportVerification({
     isSuccess,
     isUserVerified,
     error,
-    txHash: txData?.hash,
+    txHash,
     checkVerification,
   };
 }
