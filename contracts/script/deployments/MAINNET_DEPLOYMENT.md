@@ -26,7 +26,7 @@ Run the automated deployment script:
 
 ```bash
 cd contracts
-./deploy-and-verify-mainnet.sh
+sh ./script/deployments/deploy-and-verify-mainnet.sh
 ```
 
 This script will:
