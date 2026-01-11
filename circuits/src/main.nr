@@ -41,7 +41,8 @@ fn main(
     latest_total_yield: pub u64,
     expected_nullifier: pub Field
 
-    //rwa_certificate: pub Field       // @dev - Hash of RWA certificate, which is signed by an trusted authority.
+    //rwa_certificate: Field       // @dev - Hash of RWA certificate, which is signed by an trusted authority. This should be a privateInput.
+    //rwa_price: pub u64           // @dev - RWA price data, which is signed by an trusted authority. This should be a publicInput. 
 ) -> pub (Field, Field) {
     // @dev - Hash
     let inputs_for_leaf = [user_address, latest_user_balance as Field, latest_block_number as Field]; // @dev - [TODO]: Add a salt value for better security
