@@ -69,7 +69,6 @@ contract RegistrationSMTReplicator is Initializable, OwnableUpgradeable, UUPSUpg
         address sourceSMT_
     ) external initializer {
         __Ownable_init(msg.sender);
-        __UUPSUpgradeable_init();
 
         sourceSMT = sourceSMT_;
 
