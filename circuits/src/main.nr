@@ -39,9 +39,9 @@ fn main(
     epoch_start: pub u64,              // @dev - block.number at the start of the epoch
     epoch_end: pub u64,                // @dev - block.number at the end of the epoch
     latest_total_yield: pub u64,
-    expected_nullifier: pub Field
+    expected_nullifier: pub Field,
 
-    //rwa_certificate: Field       // @dev - Hash of RWA certificate, which is signed by an trusted authority. This should be a privateInput.
+    //rwa_certificate: Field,      // @dev - Hash of RWA certificate, which is signed by an trusted authority. This should be a privateInput.
     //rwa_price: pub u64           // @dev - RWA price data, which is signed by an trusted authority. This should be a publicInput. 
 ) -> pub (Field, Field) {
     // @dev - Hash
