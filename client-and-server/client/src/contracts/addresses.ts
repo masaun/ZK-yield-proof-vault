@@ -9,6 +9,11 @@ export const CONTRACT_ADDRESSES = {
     vault: process.env.NEXT_PUBLIC_VAULT_ADDRESS_TESTNET as `0x${string}`,
     verifier: process.env.NEXT_PUBLIC_VERIFIER_ADDRESS_TESTNET as `0x${string}`,
   },
+  7368: {
+    // Rarimo Mainnet
+    vault: process.env.NEXT_PUBLIC_VAULT_ADDRESS_RARIMO as `0x${string}`,
+    verifier: process.env.NEXT_PUBLIC_VERIFIER_ADDRESS_RARIMO as `0x${string}`,
+  },
 } as const;
 
 export type SupportedChainId = keyof typeof CONTRACT_ADDRESSES;

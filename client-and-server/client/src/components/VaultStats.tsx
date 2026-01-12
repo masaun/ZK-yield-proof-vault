@@ -15,7 +15,15 @@ export function VaultStats() {
     vaultAddress 
   } = useYieldVault();
 
-  const chainName = chainId === 5000 ? 'Mantle Mainnet' : 'Mantle Sepolia Testnet';
+  const getChainName = (id: number) => {
+    switch (id) {
+      case 5000: return 'Mantle Mainnet';
+      case 5003: return 'Mantle Sepolia Testnet';
+      case 7368: return 'Rarimo';
+      default: return 'Unknown Network';
+    }
+  };
+  const chainName = getChainName(chainId);
 
   return (
     <div className="vault-stats">
