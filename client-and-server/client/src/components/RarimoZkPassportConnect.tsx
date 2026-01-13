@@ -1,19 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import dynamic from 'next/dynamic';
 import { useAccount, useChainId } from 'wagmi';
 import { getRarimoConfig } from '@/config/rarimo';
 import { mantle, mantleSepolia } from '@/config';
 import type { Chain } from 'viem';
-import { ProofRequestStatuses } from '@rarimo/zk-passport-react';
+import { ZkPassportQrCode, ProofRequestStatuses } from '@rarimo/zk-passport-react';
 import type { ZkProof } from '@rarimo/zk-passport';
-
-// Dynamically import the ZkPassportQrCode component with no SSR
-const ZkPassportQrCode = dynamic(
-  () => import('@rarimo/zk-passport-react'),
-  { ssr: false }
-);
 
 export function RarimoZkPassportConnect() {
   const { address } = useAccount();
@@ -25,6 +18,7 @@ export function RarimoZkPassportConnect() {
   const [verificationProof, setVerificationProof] = useState<ZkProof | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [currentChain, setCurrentChain] = useState<Chain | null>(null);
+  const [requestId, setRequestId] = useState<string>('');
 
   // Determine the current network
   useEffect(() => {
@@ -56,6 +50,8 @@ export function RarimoZkPassportConnect() {
       alert('Please switch to Mantle Mainnet or Mantle Sepolia Testnet');
       return;
     }
+    // Generate a new requestId each time the modal is opened
+    setRequestId(`rarimo-zkp-${address}-${Date.now()}`);
     setIsOpen(true);
     setVerificationStatus('idle');
     setErrorMessage('');
@@ -103,6 +99,30 @@ export function RarimoZkPassportConnect() {
 
   return (
     <div className="max-w-4xl mx-auto p-6">
+      {/* Connected Network Display */}
+      <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+            <div>
+              <p className="text-sm text-gray-600">Connected Network</p>
+              <p className="font-semibold text-gray-900">
+                {currentChain?.name || 'Unsupported Network'}
+              </p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-gray-600">Chain ID</p>
+            <p className="font-mono text-sm font-semibold text-gray-900">{chainId}</p>
+          </div>
+        </div>
+        {!currentChain && (
+          <p className="mt-2 text-sm text-orange-700">
+            ⚠️ Please switch to Mantle Mainnet (5000) or Mantle Sepolia (5003)
+          </p>
+        )}
+      </div>
+
       <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-6 shadow-md">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -221,21 +241,23 @@ export function RarimoZkPassportConnect() {
             </h3>
             
             <div className="flex justify-center mb-4">
-              <ZkPassportQrCode
-                apiUrl={rarimoConfig.verificatorUrl}
-                requestId={`rarimo-zkp-${address}-${Date.now()}`}
-                verificationOptions={{
-                  contractAddress: rarimoConfig.zkKycAddress,
-                  receiverAddress: address,
-                  chain: currentChain,
-                }}
-                qrProps={{
-                  size: 300,
-                }}
-                onStatusChange={handleStatusChange}
-                onSuccess={handleSuccess}
-                onError={handleError}
-              />
+              {requestId && (
+                <ZkPassportQrCode
+                  apiUrl={rarimoConfig.verificatorUrl}
+                  requestId={requestId}
+                  verificationOptions={{
+                    contractAddress: rarimoConfig.zkKycAddress,
+                    receiverAddress: address,
+                    chain: currentChain,
+                  }}
+                  qrProps={{
+                    size: 300,
+                  }}
+                  onStatusChange={handleStatusChange}
+                  onSuccess={handleSuccess}
+                  onError={handleError}
+                />
+              )}
             </div>
 
             <div className="text-center text-sm text-gray-600">

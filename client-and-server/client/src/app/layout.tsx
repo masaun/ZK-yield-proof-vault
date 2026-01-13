@@ -19,7 +19,7 @@ export default async function RootLayout({
   const cookies = headersData.get('cookie');
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>
         <ContextProvider cookies={cookies}>{children}</ContextProvider>
       </body>
