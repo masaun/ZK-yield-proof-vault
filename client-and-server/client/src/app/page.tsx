@@ -4,7 +4,7 @@ import { DepositForm } from "@/components/DepositForm";
 import { ClaimYieldForm } from "@/components/ClaimYieldForm";
 import { EpochList } from "@/components/EpochList";
 import { MerkleTreeHelper } from "@/components/MerkleTreeHelper";
-import { RarimoZkPassportConnect } from "@/components/RarimoZkPassportConnect";
+import { OnChainZkPassportVerification } from "@/components/OnChainZkPassportVerification";
 import { RarimoVerificationStatus } from "@/components/RarimoVerificationStatus";
 import Image from 'next/image';
 
@@ -19,8 +19,10 @@ export default function Home() {
 
       <ConnectButton />
 
-      {/* Rarimo ZK Passport Integration */}
-      <RarimoZkPassportConnect />
+      {/* Rarimo ZK Passport On-Chain Verification */}
+      <div style={{ marginBottom: '40px' }}>
+        <OnChainZkPassportVerification />
+      </div>
       
       <RarimoVerificationStatus />
 

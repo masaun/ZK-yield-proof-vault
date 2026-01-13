@@ -54,7 +54,30 @@ export const mantleSepolia = defineChain({
   testnet: true,
 })
 
-export const networks = [mantle, mantleSepolia] as [AppKitNetwork, ...AppKitNetwork[]]
+// Define Rarimo Mainnet
+export const rarimo = defineChain({
+  id: 7368,
+  name: 'Rarimo',
+  nativeCurrency: {
+    decimals: 18,
+    name: 'Ethereum',
+    symbol: 'ETH',
+  },
+  rpcUrls: {
+    default: {
+      http: ['https://l2.rarimo.com'],
+      webSocket: ['wss://wss.l2.rarimo.com'],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: 'Rarimo Explorer',
+      url: 'https://scan.rarimo.com',
+    },
+  },
+})
+
+export const networks = [mantle, mantleSepolia, rarimo] as [AppKitNetwork, ...AppKitNetwork[]]
 
 //Set up the Wagmi Adapter (Config)
 export const wagmiAdapter = new WagmiAdapter({
