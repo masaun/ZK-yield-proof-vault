@@ -5,7 +5,7 @@ import { useAccount, useChainId } from 'wagmi';
 import { getRarimoConfig } from '@/config/rarimo';
 import { mantle, mantleSepolia } from '@/config';
 import type { Chain } from 'viem';
-import { ZkPassportQrCode, ProofRequestStatuses } from '@rarimo/zk-passport-react';
+import ZkPassportQrCode, { ProofRequestStatuses } from '@rarimo/zk-passport-react';
 import type { ZkProof } from '@rarimo/zk-passport';
 
 export function RarimoZkPassportConnect() {

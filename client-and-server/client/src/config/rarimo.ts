@@ -7,6 +7,7 @@ export const rarimoConfig = {
   relayer: {
     mainnet: process.env.NEXT_PUBLIC_RELAYER_API_URL_MAINNET || 'http://localhost:8080',
     testnet: process.env.NEXT_PUBLIC_RELAYER_API_URL_TESTNET || 'http://localhost:8080',
+    rarimo: process.env.NEXT_PUBLIC_RELAYER_API_URL_RARIMO || 'http://localhost:8080',
   },
 
   // Deployed contract addresses
@@ -19,6 +20,11 @@ export const rarimoConfig = {
       replicator: process.env.NEXT_PUBLIC_TESTNET_REGISTRATION_SMT_REPLICATOR_ADDRESS as `0x${string}` | undefined,
       zkKyc: process.env.NEXT_PUBLIC_TESTNET_ZK_KYC_RARIMO_ADDRESS as `0x${string}` | undefined,
     },
+    rarimo: {
+      // On Rarimo Mainnet, use the source SMT directly (no replicator needed)
+      replicator: process.env.NEXT_PUBLIC_RARIMO_SOURCE_SMT_ON_RARIMO_MAINNET as `0x${string}` | undefined,
+      zkKyc: process.env.NEXT_PUBLIC_RARIMO_ZK_KYC_ADDRESS as `0x${string}` | undefined,
+    },
   },
 
   // Rarimo verificator service
@@ -27,7 +33,7 @@ export const rarimoConfig = {
   },
 } as const;
 
-export function getRarimoConfig(network: 'mainnet' | 'testnet') {
+export function getRarimoConfig(network: 'mainnet' | 'testnet' | 'rarimo') {
   const contracts = rarimoConfig.contracts[network];
   const relayerUrl = rarimoConfig.relayer[network];
 
