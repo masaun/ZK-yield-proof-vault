@@ -19,12 +19,14 @@ export default async function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="bg-gray-50">
+      <body style={{background: "linear-gradient(180deg, rgba(21, 24, 26, 0.00) 63.77%, rgba(255, 255, 255, 0.04) 89.72%), #F9FAFB"}}>
         <ContextProvider cookies={cookies}>
-          <NavBar />
-          <main className="min-h-screen">
-            {children}
-          </main>
+          <div className="container-fluid" style={{maxWidth: '1280px', padding: '0.25rem'}}>
+            <NavBar />
+            <main>
+              {children}
+            </main>
+          </div>
         </ContextProvider>
       </body>
     </html>

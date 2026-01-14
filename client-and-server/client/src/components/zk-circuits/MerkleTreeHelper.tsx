@@ -91,7 +91,7 @@ export function MerkleTreeHelper() {
           />
           <button 
             onClick={addBalance}
-            className="px-3 py-1.5 bg-[#5792FF] text-white text-xs font-medium rounded-md hover:bg-blue-700 active:scale-95 transition-all duration-200 shadow-sm hover:shadow-md"
+            className="px-3 py-1.5 bg-gradient-to-b from-[#5792FF] to-blue-600 text-white text-xs font-medium rounded-md hover:from-blue-600 hover:to-blue-700 active:scale-95 transition-all duration-200 shadow-[0_2px_6px_rgba(87,146,255,0.4),inset_0_1px_0_rgba(255,255,255,0.2)] hover:shadow-[0_4px_12px_rgba(87,146,255,0.5)] active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)]"
           >
             Add
           </button>
@@ -123,7 +123,7 @@ export function MerkleTreeHelper() {
         <button 
           onClick={generateTree} 
           disabled={balances.length === 0}
-          className="w-full px-3 py-1.5 bg-[#5792FF] text-white text-xs font-medium rounded-md hover:bg-blue-700 active:scale-95 disabled:bg-gray-300 disabled:active:scale-100 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
+          className="w-full px-3 py-1.5 bg-gradient-to-b from-[#5792FF] to-blue-600 text-white text-xs font-medium rounded-md hover:from-blue-600 hover:to-blue-700 active:scale-95 disabled:from-gray-300 disabled:to-gray-400 disabled:active:scale-100 disabled:cursor-not-allowed transition-all duration-200 shadow-[0_2px_6px_rgba(87,146,255,0.4),inset_0_1px_0_rgba(255,255,255,0.2)] hover:shadow-[0_4px_12px_rgba(87,146,255,0.5)] active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] disabled:shadow-none"
         >
           Generate Tree & Root
         </button>
@@ -154,7 +154,7 @@ export function MerkleTreeHelper() {
         <button 
           onClick={generateProofForUser} 
           disabled={!selectedAddress}
-          className="w-full px-3 py-1.5 bg-[#5792FF] text-white text-xs font-medium rounded-md hover:bg-blue-700 active:scale-95 disabled:bg-gray-300 disabled:active:scale-100 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
+          className="w-full px-3 py-1.5 bg-gradient-to-b from-[#5792FF] to-blue-600 text-white text-xs font-medium rounded-md hover:from-blue-600 hover:to-blue-700 active:scale-95 disabled:from-gray-300 disabled:to-gray-400 disabled:active:scale-100 disabled:cursor-not-allowed transition-all duration-200 shadow-[0_2px_6px_rgba(87,146,255,0.4),inset_0_1px_0_rgba(255,255,255,0.2)] hover:shadow-[0_4px_12px_rgba(87,146,255,0.5)] active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] disabled:shadow-none"
         >
           Generate Proof
         </button>

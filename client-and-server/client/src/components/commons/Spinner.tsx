@@ -2,8 +2,8 @@
 
 export function Spinner() {
   return (
-    <div className="flex items-center justify-center h-screen w-full">
-      <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+    <div className="d-flex align-items-center justify-content-center" style={{height: '100vh', width: '100%'}}>
+      <div className="spinner-custom" />
     </div>
   )
 }

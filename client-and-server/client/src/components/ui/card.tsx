@@ -1,61 +1,57 @@
 import * as React from "react"
-import { cn } from "@/utils/helpers"
 
-function Card({ className, ...props }: React.ComponentProps<"div">) {
+// Bootstrap-based Card components
+function Card({ className = "", ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      className={cn(
-        "bg-white text-gray-900 flex flex-col gap-3 rounded-lg border border-gray-200 py-3 shadow-sm",
-        className
-      )}
+      className={`custom-card ${className}`}
       {...props}
     />
   )
 }
 
-function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
+function CardHeader({ className = "", ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      className={cn(
-        "grid auto-rows-min grid-rows-[auto_auto] items-start gap-1 px-4 has-[cardaction]:grid-cols-[1fr_auto]",
-        className
-      )}
+      className={`px-3 pt-3 ${className}`}
       {...props}
     />
   )
 }
 
-function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
+function CardTitle({ className = "", ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      className={cn("leading-none font-semibold text-sm text-gray-900", className)}
+      className={`fw-semibold text-dark ${className}`}
+      style={{fontSize: '0.875rem', lineHeight: 1}}
       {...props}
     />
   )
 }
 
-function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
+function CardDescription({ className = "", ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      className={cn("text-gray-600 text-xs", className)}
+      className={`text-muted ${className}`}
+      style={{fontSize: '0.75rem'}}
       {...props}
     />
   )
 }
 
-function CardContent({ className, ...props }: React.ComponentProps<"div">) {
+function CardContent({ className = "", ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      className={cn("px-4", className)}
+      className={`px-3 pb-3 ${className}`}
       {...props}
     />
   )
 }
 
-function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
+function CardFooter({ className = "", ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      className={cn("flex items-center px-6 pt-6", className)}
+      className={`d-flex align-items-center px-3 pt-3 ${className}`}
       {...props}
     />
   )

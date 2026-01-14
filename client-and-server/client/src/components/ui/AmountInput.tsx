@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import { cn } from "@/utils/helpers";
 
 interface AmountInputProps {
   value: string;
@@ -39,7 +38,7 @@ export function AmountInput({
   error,
   showMaxButton = true,
   showMinButton = false,
-  className,
+  className = "",
 }: AmountInputProps) {
   const [isFocused, setIsFocused] = useState(false);
   
@@ -58,21 +57,24 @@ export function AmountInput({
   };
 
   return (
-    <div className={cn("flex flex-col gap-1", className)}>
+    <div className={`d-flex flex-column gap-1 ${className}`}>
       {label && (
-        <label className="text-xs font-medium text-gray-700">
+        <label className="form-label mb-1" style={{fontSize: '0.75rem'}}>
           {label}
         </label>
       )}
       <div
-        className={cn(
-          "relative flex items-center gap-2 rounded-md border bg-white px-2 py-1.5 transition-all duration-200",
-          isFocused && !error && "border-[#5792FF] ring-2 ring-blue-200",
-          error && "border-red-400",
-          isMaxValue && "border-orange-400",
-          !isFocused && !error && !isMaxValue && "border-gray-300",
-          disabled && "bg-gray-50 cursor-not-allowed"
-        )}
+        className={`form-control d-flex align-items-center gap-2 ${
+          error ? 'is-invalid border-danger' : ''
+        } ${isMaxValue ? 'border-warning' : ''} ${
+          disabled ? 'bg-light' : ''
+        }`}
+        style={{
+          padding: '0.375rem 0.5rem',
+          fontSize: '0.75rem',
+          boxShadow: isFocused && !error ? '0 0 0 0.2rem rgba(87, 146, 255, 0.25)' : undefined,
+          borderColor: isFocused && !error ? 'var(--primary-blue)' : undefined
+        }}
       >
         <input
           type="number"
@@ -82,17 +84,18 @@ export function AmountInput({
           onBlur={() => setIsFocused(false)}
           placeholder={placeholder}
           disabled={disabled}
-          className={cn(
-            "flex-1 bg-transparent text-xs outline-none",
-            "text-gray-900 placeholder:text-gray-400",
-            disabled && "cursor-not-allowed"
-          )}
+          className="flex-grow-1 border-0 bg-transparent text-dark"
+          style={{
+            fontSize: '0.75rem',
+            outline: 'none',
+            padding: 0
+          }}
           step="any"
         />
         
-        <div className="flex items-center gap-1.5">
+        <div className="d-flex align-items-center gap-2">
           {suffix && (
-            <span className="text-xs font-medium text-gray-600">
+            <span className="fw-medium text-muted" style={{fontSize: '0.75rem'}}>
               {suffix}
             </span>
           )}
@@ -102,11 +105,8 @@ export function AmountInput({
               type="button"
               onClick={handleMinClick}
               disabled={disabled}
-              className={cn(
-                "px-1.5 py-0.5 text-2xs font-medium rounded transition-colors",
-                "border border-gray-300 text-gray-700 hover:bg-gray-50",
-                disabled && "opacity-50 cursor-not-allowed"
-              )}
+              className="btn btn-sm btn-outline-secondary text-2xs py-0 px-2"
+              style={{fontSize: '0.625rem'}}
             >
               MIN
             </button>
@@ -117,11 +117,8 @@ export function AmountInput({
               type="button"
               onClick={handleMaxClick}
               disabled={disabled}
-              className={cn(
-                "px-1.5 py-0.5 text-2xs font-medium rounded transition-colors",
-                "border border-[#5792FF] text-[#5792FF] hover:bg-blue-50",
-                disabled && "opacity-50 cursor-not-allowed"
-              )}
+              className="btn btn-sm btn-outline-primary text-2xs py-0 px-2"
+              style={{fontSize: '0.625rem'}}
             >
               MAX
             </button>
@@ -130,11 +127,11 @@ export function AmountInput({
       </div>
       
       {error && (
-        <p className="text-2xs text-red-600">{error}</p>
+        <p className="text-danger mb-0 text-2xs">{error}</p>
       )}
       
       {max && !error && (
-        <p className="text-2xs text-gray-500">
+        <p className="text-muted mb-0 text-2xs">
           Available: {formatAmountWithSuffix(parseFloat(max))} {suffix}
         </p>
       )}
