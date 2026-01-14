@@ -1,11 +1,11 @@
-import { ConnectButton } from "@/components/ConnectButton";
-import { VaultStats } from "@/components/VaultStats";
-import { DepositForm } from "@/components/DepositForm";
-import { ClaimYieldForm } from "@/components/ClaimYieldForm";
-import { EpochList } from "@/components/EpochList";
-import { MerkleTreeHelper } from "@/components/MerkleTreeHelper";
-import { OnChainZkPassportVerification } from "@/components/OnChainZkPassportVerification";
-import { RarimoVerificationStatus } from "@/components/RarimoVerificationStatus";
+import { ConnectButton } from "@/components/connect-wallet/ConnectButton";
+import { VaultStats } from "@/components/yield-vault/VaultStats";
+import { DepositForm } from "@/components/yield-vault/DepositForm";
+import { ClaimYieldForm } from "@/components/yield-vault/ClaimYieldForm";
+import { EpochList } from "@/components/yield-vault/EpochList";
+import { MerkleTreeHelper } from "@/components/zk-circuits/MerkleTreeHelper";
+import { OnChainZkPassportVerification } from "@/components/zk-kyc/rarimo/OnChainZkPassportVerification";
+import { RarimoVerificationStatus } from "@/components/zk-kyc/rarimo/RarimoVerificationStatus";
 import Image from 'next/image';
 
 export default function Home() {

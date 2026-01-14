@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useAccount, useChainId, useReadContract } from 'wagmi';
 import { parseAbiItem } from 'viem';
 import { getRarimoConfig } from '@/config/rarimo';
-import { useRarimoRelayer } from '@/hooks/useRarimoRelayer';
+import { useRarimoRelayer } from '@/hooks/zk-kyc/rarimo/useRarimoRelayer';
 
 const ZK_KYC_RARIMO_ABI = [
   parseAbiItem('function isVerified(address user) external view returns (bool)'),
@@ -32,12 +32,7 @@ export function RarimoVerificationStatus() {
   const network = chainId === 5000 ? 'mainnet' : 'testnet';
 
   // Get Rarimo configuration
-  let rarimoConfig: ReturnType<typeof getRarimoConfig> | undefined;
-  try {
-    rarimoConfig = getRarimoConfig(network);
-  } catch (error) {
-    console.error('Failed to get Rarimo config:', error);
-  }
+  const rarimoConfig = getRarimoConfig(network);
 
   // Check if user is verified
   const { data: isVerified, refetch: refetchVerification } = useReadContract({

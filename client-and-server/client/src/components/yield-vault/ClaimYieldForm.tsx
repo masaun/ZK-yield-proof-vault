@@ -1,11 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { useYieldVault, useEpochData, useHasClaimedEpoch } from '@/hooks/useYieldVault';
-import { useZKProof } from '@/hooks/useZKProof';
+import { useYieldVault, useEpochData, useHasClaimedEpoch } from '@/hooks/yield-vault/useYieldVault';
+import { useZkYieldProofProver } from '@/hooks/zk-circuits/useZkYieldProofProver';
 import { useAccount } from 'wagmi';
-import { generateNullifier } from '@/services/zkProof';
-import type { ProofInputs } from '@/services/zkProof';
+import { generateNullifier } from '@/zk-circuits/zkYieldProofProver';
+import type { ProofInputs } from '@/zk-circuits/zkYieldProofProver';
 
 export function ClaimYieldForm() {
   const [epochId, setEpochId] = useState('');
@@ -30,7 +30,7 @@ export function ClaimYieldForm() {
     isGenerating, 
     error: proofError, 
     getFormattedProof 
-  } = useZKProof();
+  } = useZkYieldProofProver();
 
   const epochIdBigInt = epochId ? BigInt(epochId) : undefined;
   const { epochData } = useEpochData(epochIdBigInt);

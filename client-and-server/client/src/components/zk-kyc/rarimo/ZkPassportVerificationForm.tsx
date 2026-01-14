@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAccount } from 'wagmi';
-import { useZkPassportVerification } from '../hooks/useZkPassportVerification';
+import { useZkPassportVerification } from '@/hooks/zk-kyc/rarimo/useZkPassportVerification';
 
 interface ZkPassportVerificationFormProps {
   zkKycAddress: `0x${string}`;

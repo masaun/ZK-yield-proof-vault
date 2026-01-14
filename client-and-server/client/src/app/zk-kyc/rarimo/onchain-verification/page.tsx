@@ -4,8 +4,8 @@
  * This page demonstrates the complete on-chain verification flow
  * following the Rarimo documentation pattern
  */
-import { OnChainZkPassportVerification } from "@/components/OnChainZkPassportVerification";
-import { ConnectButton } from "@/components/ConnectButton";
+import { OnChainZkPassportVerification } from "@/components/zk-kyc/rarimo/OnChainZkPassportVerification";
+import { ConnectButton } from "@/components/connect-wallet/ConnectButton";
 import Image from 'next/image';
 
 export default function OnChainVerificationPage() {

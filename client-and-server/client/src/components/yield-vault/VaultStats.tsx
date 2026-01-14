@@ -1,6 +1,6 @@
 'use client';
 
-import { useYieldVault } from '@/hooks/useYieldVault';
+import { useYieldVault } from '@/hooks/yield-vault/useYieldVault';
 import { useAccount, useChainId } from 'wagmi';
 import { formatEther } from 'viem';
 

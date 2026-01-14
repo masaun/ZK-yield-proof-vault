@@ -9,7 +9,7 @@ import {
   hashUserBalance,
   type UserBalance,
   type MerkleProof
-} from '@/utils/merkleTree';
+} from '@/zk-circuits/merkleTree';
 
 export function MerkleTreeHelper() {
   const [balances, setBalances] = useState<UserBalance[]>([]);

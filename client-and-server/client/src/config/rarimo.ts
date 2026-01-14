@@ -38,7 +38,8 @@ export function getRarimoConfig(network: 'mainnet' | 'testnet' | 'rarimo') {
   const relayerUrl = rarimoConfig.relayer[network];
 
   if (!contracts.replicator || !contracts.zkKyc) {
-    throw new Error(`Rarimo contracts not configured for ${network}`);
+    console.warn(`Rarimo contracts not configured for ${network}. Please set the required environment variables.`);
+    return null;
   }
 
   return {
