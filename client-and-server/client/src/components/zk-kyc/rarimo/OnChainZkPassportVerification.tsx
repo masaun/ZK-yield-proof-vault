@@ -17,7 +17,6 @@ import { useOnChainVerification } from '@/hooks/zk-kyc/rarimo/useOnChainVerifica
 import { Spinner } from '../../commons/Spinner'
 import { CopyButton } from '../../commons/CopyButton'
 import { DocsLink } from '../../commons/DocsLink'
-import { shortenAddress } from '@/utils/helpers'
 
 type ErrorType = 'estimate' | 'verification'
 
@@ -57,8 +56,6 @@ export function OnChainZkPassportVerification() {
     isEstimating,
     isVerifying,
     isVerifySuccess,
-    isVerifyError,
-    verifyError,
     txHash,
     estimateVerification,
     executeVerification,
@@ -78,7 +75,7 @@ export function OnChainZkPassportVerification() {
         setErrorMessage('')
 
         // First estimate the transaction
-        const canVerify = await estimateVerification(proof)
+        const canVerify = await estimateVerification()
         if (!canVerify) {
           setErrorType('estimate')
           setErrorMessage('Failed to estimate verification transaction. Please check your wallet and try again.')
@@ -100,6 +97,7 @@ export function OnChainZkPassportVerification() {
     }
 
     attemptVerification()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [proof, address])
 
   // Handle status changes from QR code component

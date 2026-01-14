@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
-
-
-import { headers } from 'next/headers' // added
+import { headers } from 'next/headers';
 import './globals.css';
-import ContextProvider from '@/context'
+import ContextProvider from '@/context';
+import { NavBar } from '@/components/layout/NavBar';
 
 export const metadata: Metadata = {
-  title: "AppKit in Next.js + wagmi",
-  description: "AppKit example dApp",
+  title: "ZK Yield Vault - Privacy-Preserving Yield Distribution",
+  description: "Privacy-preserving yield distribution on Mantle using zero-knowledge proofs",
 };
 
 export default async function RootLayout({
@@ -20,8 +19,13 @@ export default async function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>
-        <ContextProvider cookies={cookies}>{children}</ContextProvider>
+      <body className="bg-gray-50">
+        <ContextProvider cookies={cookies}>
+          <NavBar />
+          <main className="min-h-screen">
+            {children}
+          </main>
+        </ContextProvider>
       </body>
     </html>
   );

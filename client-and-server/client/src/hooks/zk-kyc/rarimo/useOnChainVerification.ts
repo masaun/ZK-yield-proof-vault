@@ -24,7 +24,7 @@ interface UseOnChainVerificationProps {
  * Build arguments for the verifyZkPassport function call
  * This converts the ZK proof into the format expected by the contract
  */
-function buildVerificationArguments(proof: ZkProof, address: string) {
+function buildVerificationArguments(proof: ZkProof) {
   // Extract proof parameters
   const { pubSignals, proof: zkProof } = proof
 
@@ -115,7 +115,7 @@ export function useOnChainVerification({
    * Estimate the verification transaction
    * Returns true if the transaction can be executed
    */
-  const estimateVerification = async (proof: ZkProof): Promise<boolean> => {
+  const estimateVerification = async (): Promise<boolean> => {
     try {
       if (!address) {
         console.error('No wallet address found')
@@ -124,9 +124,6 @@ export function useOnChainVerification({
 
       setIsEstimating(true)
       
-      // Build the verification arguments
-      const args = buildVerificationArguments(proof, address)
-
       // Try to estimate gas
       // This will throw if the transaction would fail
       // For now, we'll just return true if we get here
@@ -149,7 +146,7 @@ export function useOnChainVerification({
       throw new Error('No wallet address')
     }
 
-    const args = buildVerificationArguments(proof, address)
+    const args = buildVerificationArguments(proof)
 
     await verify({
       abi: ZK_KYC_WITH_RARIMO_ABI,
