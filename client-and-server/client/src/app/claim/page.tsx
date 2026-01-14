@@ -21,11 +21,11 @@ export default function ClaimPage() {
         </div>
 
         {!isConnected ? (
-          <div className="flex items-center gap-2 p-3 rounded-lg text-xs font-medium bg-amber-50 text-amber-900 border border-amber-200">
-            <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+          <div className="alert alert-warning d-flex align-items-center gap-2 mb-3" role="alert" style={{fontSize: '0.75rem'}}>
+            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" />
             </svg>
-            Please connect your wallet to claim yield
+            <div>Wallet not connected. Please connect your wallet to claim yield.</div>
           </div>
       ) : (
         <>

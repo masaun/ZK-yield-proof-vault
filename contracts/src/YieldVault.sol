@@ -362,7 +362,9 @@ contract YieldVault {
         // Validate total yield (index 5)
         if (uint64(uint256(publicInputs[5])) != epoch.totalYield) revert InvalidProof();
     }
-    
+
+    // ============ Yield Calculation ============
+
     /**
      * @notice Calculate yield amount from public inputs
      * @param publicInputs The public inputs array

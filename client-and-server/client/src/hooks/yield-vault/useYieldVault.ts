@@ -57,13 +57,29 @@ export function useYieldVault() {
   // Write functions
   const deposit = async (amount: string) => {
     if (!vaultAddress) throw new Error('Vault address not found for this network');
+    if (!address) throw new Error('Wallet not connected');
     
-    return writeContract({
-      address: vaultAddress,
-      abi: YieldVaultABI,
-      functionName: 'deposit',
-      value: parseEther(amount),
-    });
+    try {
+      const value = parseEther(amount);
+      console.log('Preparing deposit:', {
+        vaultAddress,
+        amount,
+        value: value.toString(),
+        from: address,
+      });
+      
+      // Let the wallet handle gas estimation automatically
+      // Manual gas estimation on Mantle can sometimes cause issues
+      return writeContract({
+        address: vaultAddress,
+        abi: YieldVaultABI,
+        functionName: 'deposit',
+        value: value,
+      });
+    } catch (err) {
+      console.error('Deposit error:', err);
+      throw err;
+    }
   };
 
   const withdraw = async (amount: string) => {
@@ -74,6 +90,7 @@ export function useYieldVault() {
       abi: YieldVaultABI,
       functionName: 'withdraw',
       args: [parseEther(amount)],
+      gas: 200000n, // Explicit gas limit to prevent "Gas limit too low" error
     });
   };
 
@@ -89,6 +106,7 @@ export function useYieldVault() {
       abi: YieldVaultABI,
       functionName: 'claimYield',
       args: [epochId, proof, publicInputs],
+      gas: 500000n, // Higher gas limit for ZK proof verification
     });
   };
 
