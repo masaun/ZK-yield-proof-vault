@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useAccount, useChainId, useReadContract } from 'wagmi';
-import { parseAbiItem } from 'viem';
+import { parseAbiItem, type Address } from 'viem';
 import { getRarimoConfig } from '@/config/rarimo';
 import { useRarimoRelayer } from '@/hooks/zk-kyc/rarimo/useRarimoRelayer';
 
@@ -56,13 +56,18 @@ export function RarimoVerificationStatus() {
     functionName: 'getRootsLength',
   });
 
-  // Initialize relayer hook
-  const relayer = rarimoConfig
-    ? useRarimoRelayer({
-        replicatorAddress: rarimoConfig.replicatorAddress,
-        relayerApiUrl: rarimoConfig.relayerApiUrl,
-      })
-    : null;
+  // Initialize relayer hook (always call hooks at top level)
+  const relayer = useRarimoRelayer(
+    rarimoConfig
+      ? {
+          replicatorAddress: rarimoConfig.replicatorAddress,
+          relayerApiUrl: rarimoConfig.relayerApiUrl,
+        }
+      : {
+          replicatorAddress: '0x0' as Address,
+          relayerApiUrl: '',
+        }
+  );
 
   // Auto-refresh verification status
   useEffect(() => {

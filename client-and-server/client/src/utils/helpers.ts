@@ -2,6 +2,13 @@
  * Utility functions for the ZK Passport on-chain verification
  */
 
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
 /**
  * Shorten an Ethereum address for display
  * @param address - The full Ethereum address
