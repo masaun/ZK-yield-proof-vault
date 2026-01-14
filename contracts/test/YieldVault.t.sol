@@ -23,6 +23,7 @@ contract YieldVaultTest is Test {
     uint64 public constant INITIAL_YIELD_RATE = 1e15; // 0.001 per block per unit
     
     event Deposited(address indexed user, uint256 amount, uint256 timestamp, uint256 blockNumber);
+    event Withdrawn(address indexed user, uint256 amount, uint256 timestamp, uint256 blockNumber);
     event EpochSnapshotted(uint256 indexed epochId, uint256 startBlock, uint256 endBlock, uint256 totalDeposits, uint256 totalYield);
     event YieldClaimed(address indexed user, uint256 indexed epochId, uint256 yieldAmount, bytes32 nullifier);
     
@@ -93,6 +94,127 @@ contract YieldVaultTest is Test {
         assertEq(vault.getUserBalance(user1), 10 ether);
         assertEq(vault.getUserBalance(user2), 15 ether);
         assertEq(vault.totalDeposits(), 25 ether);
+    }
+    
+    // ============ Withdraw Tests ============
+    
+    function test_Withdraw() public {
+        uint256 depositAmount = 10 ether;
+        uint256 withdrawAmount = 6 ether;
+        
+        vm.startPrank(user1);
+        vault.deposit{value: depositAmount}();
+        
+        uint256 balanceBefore = user1.balance;
+        
+        vm.expectEmit(true, false, false, true);
+        emit Withdrawn(user1, withdrawAmount, block.timestamp, block.number);
+        
+        vault.withdraw(withdrawAmount);
+        vm.stopPrank();
+        
+        assertEq(vault.getUserBalance(user1), depositAmount - withdrawAmount);
+        assertEq(vault.totalDeposits(), depositAmount - withdrawAmount);
+        assertEq(user1.balance, balanceBefore + withdrawAmount);
+    }
+    
+    function test_WithdrawAll() public {
+        uint256 depositAmount = 10 ether;
+        
+        vm.startPrank(user1);
+        vault.deposit{value: depositAmount}();
+        vault.withdraw(depositAmount);
+        vm.stopPrank();
+        
+        assertEq(vault.getUserBalance(user1), 0);
+        assertEq(vault.totalDeposits(), 0);
+    }
+    
+    function test_RevertWhen_WithdrawZero() public {
+        vm.startPrank(user1);
+        vault.deposit{value: 10 ether}();
+        
+        vm.expectRevert(YieldVault.InvalidDeposit.selector);
+        vault.withdraw(0);
+        vm.stopPrank();
+    }
+    
+    function test_RevertWhen_WithdrawInsufficientBalance() public {
+        vm.startPrank(user1);
+        vault.deposit{value: 5 ether}();
+        
+        vm.expectRevert(YieldVault.InsufficientBalance.selector);
+        vault.withdraw(10 ether);
+        vm.stopPrank();
+    }
+    
+    // ============ Depositor Tracking Tests ============
+    
+    function test_GetAllDepositors() public {
+        address[] memory depositors = vault.getAllDepositors();
+        assertEq(depositors.length, 0);
+        
+        vm.prank(user1);
+        vault.deposit{value: 10 ether}();
+        
+        depositors = vault.getAllDepositors();
+        assertEq(depositors.length, 1);
+        assertEq(depositors[0], user1);
+        
+        vm.prank(user2);
+        vault.deposit{value: 5 ether}();
+        
+        depositors = vault.getAllDepositors();
+        assertEq(depositors.length, 2);
+        assertEq(depositors[0], user1);
+        assertEq(depositors[1], user2);
+    }
+    
+    function test_GetAllDepositorsWithBalances() public {
+        vm.prank(user1);
+        vault.deposit{value: 10 ether}();
+        
+        vm.prank(user2);
+        vault.deposit{value: 15 ether}();
+        
+        (address[] memory addresses, uint256[] memory balances) = vault.getAllDepositorsWithBalances();
+        
+        assertEq(addresses.length, 2);
+        assertEq(balances.length, 2);
+        assertEq(addresses[0], user1);
+        assertEq(addresses[1], user2);
+        assertEq(balances[0], 10 ether);
+        assertEq(balances[1], 15 ether);
+    }
+    
+    function test_DepositorNotDuplicatedOnMultipleDeposits() public {
+        vm.startPrank(user1);
+        vault.deposit{value: 5 ether}();
+        vault.deposit{value: 3 ether}();
+        vault.deposit{value: 2 ether}();
+        vm.stopPrank();
+        
+        address[] memory depositors = vault.getAllDepositors();
+        assertEq(depositors.length, 1, "User should only appear once");
+        assertEq(depositors[0], user1);
+    }
+    
+    function test_GetUserBalances() public {
+        vm.prank(user1);
+        vault.deposit{value: 10 ether}();
+        
+        vm.prank(user2);
+        vault.deposit{value: 15 ether}();
+        
+        address[] memory users = new address[](2);
+        users[0] = user1;
+        users[1] = user2;
+        
+        uint256[] memory balances = vault.getUserBalances(users);
+        
+        assertEq(balances.length, 2);
+        assertEq(balances[0], 10 ether);
+        assertEq(balances[1], 15 ether);
     }
     
     // ============ Epoch Management Tests ============

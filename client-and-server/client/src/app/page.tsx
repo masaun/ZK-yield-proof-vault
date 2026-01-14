@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { VaultStats } from "@/components/yield-vault/VaultStats";
 import { EpochList } from "@/components/yield-vault/EpochList";
-import { Card, CardContent } from "@/components/ui/card";
 import { SimpleCard } from "@/components/ui/SimpleCard";
 import { useAccount } from 'wagmi';
 

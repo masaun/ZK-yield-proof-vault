@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useYieldVault, useEpochData, useHasClaimedEpoch } from '@/hooks/yield-vault/useYieldVault';
+import { useYieldVault, useEpochData, useHasClaimedEpoch, useEpochsPassedSinceDeposit, useUserDepositInfo, useAllDepositorsWithBalances } from '@/hooks/yield-vault/useYieldVault';
 import { useZkYieldProofProver } from '@/hooks/zk-circuits/useZkYieldProofProver';
 import { useAccount } from 'wagmi';
 import { generateNullifier } from '@/zk-circuits/zkYieldProofProver';
@@ -32,8 +32,13 @@ export function ClaimYieldForm() {
     currentEpochId 
   } = useYieldVault();
   
+  // Get epochs passed from contract
+  const { epochsPassed: contractEpochsPassed } = useEpochsPassedSinceDeposit();
+  const { depositInfo } = useUserDepositInfo();
+  const { depositorsData } = useAllDepositorsWithBalances();
+  
   const { 
-    generateProof, 
+    generateProof,
     isGenerating, 
     error: proofError, 
     getFormattedProof 
@@ -52,14 +57,16 @@ export function ClaimYieldForm() {
   const { epochData } = useEpochData(epochIdBigInt);
   const { hasClaimed } = useHasClaimedEpoch(epochIdBigInt);
 
-  // Calculate epochs passed since user deposited
-  const epochsPassed = currentEpochId !== undefined && userBalance && userBalance > 0n
-    ? Number(currentEpochId)
-    : 0;
+  // Use epochs passed from contract, fallback to current calculation
+  const epochsPassed = contractEpochsPassed !== undefined 
+    ? Number(contractEpochsPassed)
+    : (currentEpochId !== undefined && userBalance && userBalance > 0n
+        ? Number(currentEpochId)
+        : 0);
 
   // Auto-calculate Merkle proof and nullifier when epoch is selected
   useEffect(() => {
-    if (!selectedEpochId || !address || !epochData || !userBalance) {
+    if (!selectedEpochId || !address || !epochData || !userBalance || !depositorsData) {
       setCalculationReady(false);
       return;
     }
@@ -69,18 +76,28 @@ export function ClaimYieldForm() {
       const secretInput = poseidon1([BigInt(address), BigInt(selectedEpochId)]);
       setAutoNullifierSecret(secretInput.toString());
 
-      // 2. Build Merkle tree with user balance
-      // In production, you would fetch all user balances from the contract
-      // For now, we'll create a mock tree with the current user
-      const mockBalances: UserBalance[] = [
-        { address: address, balance: userBalance },
-        // Add more users here if available from contract
-      ];
+      // 2. Build Merkle tree with ACTUAL user balances from contract
+      const [addresses, balances] = depositorsData as [readonly `0x${string}`[], readonly bigint[]];
+      
+      const actualBalances: UserBalance[] = addresses.map((addr, index) => ({
+        address: addr,
+        balance: balances[index],
+      }));
 
-      const { tree } = buildMerkleTree(mockBalances);
+      // Filter out users with zero balance
+      const activeBalances = actualBalances.filter(ub => ub.balance > 0n);
+      
+      if (activeBalances.length === 0) {
+        console.error('No active depositors found');
+        setCalculationReady(false);
+        return;
+      }
+
+      // Build Merkle tree (tree is implicitly used in generateMerkleProof)
+      buildMerkleTree(activeBalances);
       
       // 3. Generate Merkle proof for current user
-      const proof = generateMerkleProof(mockBalances, address);
+      const proof = generateMerkleProof(activeBalances, address);
       
       if (proof) {
         setAutoMerkleSiblings(proof.siblings.map(s => s.toString()).join(', '));
@@ -94,7 +111,7 @@ export function ClaimYieldForm() {
       console.error('Error calculating proof parameters:', error);
       setCalculationReady(false);
     }
-  }, [selectedEpochId, address, epochData, userBalance]);
+  }, [selectedEpochId, address, epochData, userBalance, depositorsData]);
 
   const handleGenerateAndClaim = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -199,8 +216,18 @@ export function ClaimYieldForm() {
               <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <p className="mb-0 fw-semibold text-primary" style={{fontSize: '0.75rem'}}>Epochs Since Deposit:</p>
+              <p className="mb-0 fw-semibold text-primary" style={{fontSize: '0.75rem'}}>Deposit Information:</p>
             </div>
+            {depositInfo && (
+              <div className="mb-2">
+                <p className="text-primary text-2xs mb-1">
+                  Deposited in Epoch: <span className="fw-semibold">#{depositInfo[1].toString()}</span>
+                </p>
+                <p className="text-primary text-2xs mb-0">
+                  Current Epoch: <span className="fw-semibold">#{currentEpochId?.toString()}</span>
+                </p>
+              </div>
+            )}
             <p className="display-6 fw-bold text-primary mb-1">{epochsPassed}</p>
             <p className="text-primary text-2xs">
               {epochsPassed === 0 && 'No epochs have passed yet'}
@@ -335,9 +362,10 @@ export function ClaimYieldForm() {
         </ol>
         <div className="alert alert-secondary mb-0" style={{fontSize: '0.625rem', padding: '0.5rem'}}>
           <p className="mb-0">
-            <strong>🚀 Fully Automated:</strong> No manual input needed! The system calculates all cryptographic 
-            parameters (epoch selection, nullifier secret, Merkle siblings, and index) using ZK-Kit&apos;s LeanIMT 
-            and Poseidon hash. Just connect your wallet and claim!
+            <strong>🚀 Fully Automated with Real Data:</strong> No manual input needed! The system fetches actual 
+            depositor balances from the smart contract and calculates all cryptographic parameters (epoch selection, 
+            nullifier secret, Merkle siblings, and index) using ZK-Kit&apos;s LeanIMT and Poseidon hash. 
+            Just connect your wallet and claim!
           </p>
         </div>
       </div>
