@@ -6,12 +6,22 @@ import { usePathname } from 'next/navigation';
 import { useAccount, useChainId } from 'wagmi';
 
 const navItems = [
-  { name: 'Dashboard', href: '/', icon: '📊' },
-  { name: 'Deposit', href: '/deposit', icon: '💰' },
-  { name: 'Withdraw', href: '/withdraw', icon: '🏦' },
-  { name: 'Claim', href: '/claim', icon: '🎁' },
-  { name: 'ZK-KYC', href: '/zk-kyc', icon: '🛡️' },
+  { name: 'Dashboard', href: '/' },
+  { name: 'Deposit', href: '/deposit' },
+  { name: 'Withdraw', href: '/withdraw' },
+  { name: 'Claim', href: '/claim' },
+  { name: 'ZK-KYC', href: '/zk-kyc' },
 ];
+
+const getNetworkColor = (color: string) => {
+  const colorMap: Record<string, string> = {
+    'bg-emerald-500': 'bg-success',
+    'bg-amber-500': 'bg-warning',
+    'bg-purple-500': 'bg-primary',
+    'bg-gray-500': 'bg-secondary'
+  };
+  return colorMap[color] || 'bg-secondary';
+};
 
 export function NavBar() {
   const pathname = usePathname();
@@ -22,75 +32,59 @@ export function NavBar() {
   const getNetworkInfo = () => {
     switch (chainId) {
       case 5000:
-        return { name: 'Mantle', short: 'MNT', color: 'bg-emerald-500', textColor: 'text-emerald-700', bgColor: 'bg-emerald-50' };
+        return { name: 'Mantle', short: 'MNT', color: 'bg-emerald-500' };
       case 5003:
-        return { name: 'Mantle Sepolia', short: 'MNT-T', color: 'bg-amber-500', textColor: 'text-amber-700', bgColor: 'bg-amber-50' };
+        return { name: 'Mantle Sepolia', short: 'MNT-T', color: 'bg-amber-500' };
       case 7368:
-        return { name: 'Rarimo', short: 'RMO', color: 'bg-purple-500', textColor: 'text-purple-700', bgColor: 'bg-purple-50' };
+        return { name: 'Rarimo', short: 'RMO', color: 'bg-purple-500' };
       default:
-        return { name: 'Unknown', short: '?', color: 'bg-gray-500', textColor: 'text-gray-700', bgColor: 'bg-gray-50' };
+        return { name: 'Unknown', short: '?', color: 'bg-gray-500' };
     }
   };
 
   const network = getNetworkInfo();
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-gray-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
-      <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
+    <header className="sticky-top navbar-custom">
+      <nav className="px-3 py-2">
+        <div className="d-flex align-items-center justify-content-between">
           {/* Logo Section */}
-          <div className="flex items-center gap-8">
-            <Link href="/" className="flex items-center gap-2.5 group">
-              <div className="relative h-9 w-9 rounded-xl bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 p-0.5 transition-transform group-hover:scale-105">
-                <div className="flex h-full w-full items-center justify-center rounded-[10px] bg-white">
-                  <span className="text-lg font-bold bg-gradient-to-br from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                    ZK
-                  </span>
-                </div>
-              </div>
-              <div className="hidden sm:block">
-                <span className="text-base font-semibold text-gray-900 group-hover:text-gray-700 transition-colors">
-                  Yield Vault
-                </span>
-                <div className="text-[10px] font-medium text-gray-500 -mt-0.5">
-                  Privacy First
-                </div>
-              </div>
+          <div className="d-flex align-items-center gap-2">
+            <Link href="/" className="text-decoration-none">
+              <span className="fw-semibold text-white" style={{fontSize: '0.875rem', opacity: 0.9}}>
+                ZK Yield Vault
+              </span>
             </Link>
 
             {/* Desktop Navigation */}
-            <div className="hidden lg:flex items-center gap-1">
-              {navItems.map((item) => {
+            <span className="text-white d-none d-lg-inline mx-1" style={{opacity: 0.4}}>›</span>
+            <div className="d-none d-lg-flex align-items-center gap-1">
+              {navItems.map((item, index) => {
                 const isActive = pathname === item.href || 
                   (item.href !== '/' && pathname.startsWith(item.href));
                 return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`relative px-3 py-1.5 text-xs font-medium transition-all duration-200 rounded-md ${
-                      isActive
-                        ? 'text-blue-700 bg-blue-50'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                    }`}
-                  >
-                    <span className="relative z-10">{item.name}</span>
-                    {isActive && (
-                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-blue-600" />
-                    )}
-                  </Link>
+                  <div key={item.href} className="d-flex align-items-center">
+                    {index > 0 && <span className="text-white mx-1" style={{opacity: 0.4}}>›</span>}
+                    <Link
+                      href={item.href}
+                      className={`nav-link-custom ${isActive ? 'active' : ''}`}
+                    >
+                      {item.name}
+                    </Link>
+                  </div>
                 );
               })}
             </div>
           </div>
 
           {/* Right Section - Network & Wallet */}
-          <div className="flex items-center gap-2">
+          <div className="d-flex align-items-center gap-2">
             {isConnected ? (
-              <div className="flex items-center gap-2">
+              <div className="d-flex align-items-center gap-2">
                 {/* Network Badge */}
-                <div className={`hidden sm:flex items-center gap-1.5 px-2 py-1 rounded-md border ${network.bgColor} border-gray-200`}>
-                  <div className={`h-1.5 w-1.5 rounded-full ${network.color}`} />
-                  <span className={`text-2xs font-semibold ${network.textColor}`}>
+                <div className="d-none d-sm-flex align-items-center gap-2 network-badge">
+                  <div className={`network-dot ${getNetworkColor(network.color)}`} />
+                  <span className="text-2xs fw-medium text-white">
                     {network.short}
                   </span>
                 </div>
@@ -105,11 +99,13 @@ export function NavBar() {
             {/* Mobile Menu Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+              className="d-lg-none btn btn-sm text-white border-0 p-2"
+              style={{backgroundColor: 'rgba(255, 255, 255, 0.1)'}}
               aria-label="Toggle menu"
             >
               <svg
-                className="h-5 w-5"
+                width="20"
+                height="20"
                 fill="none"
                 viewBox="0 0 24 24"
                 strokeWidth="2"
@@ -127,8 +123,8 @@ export function NavBar() {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="lg:hidden border-t border-gray-200 py-4 animate-in slide-in-from-top duration-200">
-            <div className="space-y-1">
+          <div className="d-lg-none bg-white rounded-bottom mt-2 p-2 shadow">
+            <div className="d-flex flex-column gap-1">
               {navItems.map((item) => {
                 const isActive = pathname === item.href || 
                   (item.href !== '/' && pathname.startsWith(item.href));
@@ -137,32 +133,17 @@ export function NavBar() {
                     key={item.href}
                     href={item.href}
                     onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center gap-3 px-3 py-2.5 text-xs font-medium rounded-md transition-colors ${
+                    className={`text-decoration-none px-2 py-2 rounded text-2xs fw-medium ${
                       isActive
-                        ? 'text-blue-700 bg-blue-50'
-                        : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
+                        ? 'bg-primary bg-opacity-10 text-primary'
+                        : 'text-dark'
                     }`}
                   >
-                    <span className="text-lg">{item.icon}</span>
-                    <span>{item.name}</span>
+                    {item.name}
                   </Link>
                 );
               })}
             </div>
-            
-            {isConnected && (
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <div className={`flex items-center justify-between px-3 py-2 rounded-lg ${network.bgColor}`}>
-                  <span className="text-xs font-medium text-gray-600">Network</span>
-                  <div className="flex items-center gap-1.5">
-                    <div className={`h-2 w-2 rounded-full ${network.color}`} />
-                    <span className={`text-xs font-semibold ${network.textColor}`}>
-                      {network.name}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
       </nav>

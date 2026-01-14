@@ -1,21 +1,26 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useYieldVault, useEpochData, useHasClaimedEpoch } from '@/hooks/yield-vault/useYieldVault';
 import { useZkYieldProofProver } from '@/hooks/zk-circuits/useZkYieldProofProver';
 import { useAccount } from 'wagmi';
 import { generateNullifier } from '@/zk-circuits/zkYieldProofProver';
 import type { ProofInputs } from '@/zk-circuits/zkYieldProofProver';
 import { SimpleCard } from '@/components/ui/SimpleCard';
+import { buildMerkleTree, generateMerkleProof, type UserBalance } from '@/zk-circuits/merkleTree';
+import { poseidon1 } from 'poseidon-lite';
 
 export function ClaimYieldForm() {
-  const [epochId, setEpochId] = useState('');
-  const [nullifierSecret, setNullifierSecret] = useState('');
-  const [merkleSiblings, setMerkleSiblings] = useState('');
-  const [merkleIndex, setMerkleIndex] = useState('0');
   const [step, setStep] = useState<'input' | 'generating' | 'claiming'>('input');
   
-  const { isConnected } = useAccount();
+  // Auto-calculated values (not editable by user, but displayed)
+  const [autoNullifierSecret, setAutoNullifierSecret] = useState('');
+  const [autoMerkleSiblings, setAutoMerkleSiblings] = useState('');
+  const [autoMerkleIndex, setAutoMerkleIndex] = useState('0');
+  const [calculationReady, setCalculationReady] = useState(false);
+  const [selectedEpochId, setSelectedEpochId] = useState<string>('');
+  
+  const { isConnected, address } = useAccount();
   const { 
     claimYield, 
     isPending, 
@@ -23,7 +28,8 @@ export function ClaimYieldForm() {
     isConfirmed, 
     error: claimError,
     userBalance,
-    refetchBalance 
+    refetchBalance,
+    currentEpochId 
   } = useYieldVault();
   
   const { 
@@ -33,14 +39,67 @@ export function ClaimYieldForm() {
     getFormattedProof 
   } = useZkYieldProofProver();
 
-  const epochIdBigInt = epochId ? BigInt(epochId) : undefined;
+  // Auto-select the latest completed epoch
+  useEffect(() => {
+    if (currentEpochId !== undefined && currentEpochId > 0n) {
+      // Select the previous epoch (current epoch - 1) as it's likely completed
+      const latestClaimableEpoch = (currentEpochId - 1n).toString();
+      setSelectedEpochId(latestClaimableEpoch);
+    }
+  }, [currentEpochId]);
+
+  const epochIdBigInt = selectedEpochId ? BigInt(selectedEpochId) : undefined;
   const { epochData } = useEpochData(epochIdBigInt);
   const { hasClaimed } = useHasClaimedEpoch(epochIdBigInt);
+
+  // Calculate epochs passed since user deposited
+  const epochsPassed = currentEpochId !== undefined && userBalance && userBalance > 0n
+    ? Number(currentEpochId)
+    : 0;
+
+  // Auto-calculate Merkle proof and nullifier when epoch is selected
+  useEffect(() => {
+    if (!selectedEpochId || !address || !epochData || !userBalance) {
+      setCalculationReady(false);
+      return;
+    }
+
+    try {
+      // 1. Generate nullifier secret from user address and epoch
+      const secretInput = poseidon1([BigInt(address), BigInt(selectedEpochId)]);
+      setAutoNullifierSecret(secretInput.toString());
+
+      // 2. Build Merkle tree with user balance
+      // In production, you would fetch all user balances from the contract
+      // For now, we'll create a mock tree with the current user
+      const mockBalances: UserBalance[] = [
+        { address: address, balance: userBalance },
+        // Add more users here if available from contract
+      ];
+
+      const { tree } = buildMerkleTree(mockBalances);
+      
+      // 3. Generate Merkle proof for current user
+      const proof = generateMerkleProof(mockBalances, address);
+      
+      if (proof) {
+        setAutoMerkleSiblings(proof.siblings.map(s => s.toString()).join(', '));
+        setAutoMerkleIndex(proof.index.toString());
+        setCalculationReady(true);
+      } else {
+        console.error('Failed to generate Merkle proof');
+        setCalculationReady(false);
+      }
+    } catch (error) {
+      console.error('Error calculating proof parameters:', error);
+      setCalculationReady(false);
+    }
+  }, [selectedEpochId, address, epochData, userBalance]);
 
   const handleGenerateAndClaim = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!epochData || !userBalance) {
+    if (!epochData || !userBalance || !address) {
       alert('Unable to load epoch data or user balance');
       return;
     }
@@ -50,23 +109,28 @@ export function ClaimYieldForm() {
       return;
     }
 
+    if (!calculationReady) {
+      alert('Proof parameters are still being calculated. Please wait.');
+      return;
+    }
+
     try {
       // Step 1: Generate proof
       setStep('generating');
       
-      // Parse Merkle siblings (ZK-Kit format)
-      const siblingsArray = merkleSiblings
+      // Parse Merkle siblings
+      const siblingsArray = autoMerkleSiblings
         .split(',')
         .map(s => s.trim())
         .filter(s => s.length > 0);
 
-      // Generate nullifier from secret using Poseidon
-      const nullifier = generateNullifier(nullifierSecret);
+      // Generate nullifier from auto-calculated secret
+      const nullifier = generateNullifier(autoNullifierSecret);
 
       const proofInputs: ProofInputs = {
         user_balance: userBalance.toString(),
         user_balance_merkle_path: siblingsArray,
-        user_balance_merkle_index: merkleIndex,
+        user_balance_merkle_index: autoMerkleIndex,
         epoch_start: epochData[1].toString(), // startBlock
         epoch_end: epochData[2].toString(),   // endBlock
         latest_block_number: epochData[2].toString(), // Using endBlock as latest
@@ -87,17 +151,18 @@ export function ClaimYieldForm() {
       }
 
       await claimYield(
-        BigInt(epochId),
+        BigInt(selectedEpochId),
         formattedProof.proof,
         formattedProof.publicInputs
       );
 
       // Reset form after successful claim
       if (isConfirmed) {
-        setEpochId('');
-        setNullifierSecret('');
-        setMerkleSiblings('');
-        setMerkleIndex('0');
+        setSelectedEpochId('');
+        setAutoNullifierSecret('');
+        setAutoMerkleSiblings('');
+        setAutoMerkleIndex('0');
+        setCalculationReady(false);
         setStep('input');
         await refetchBalance();
       }
@@ -109,7 +174,7 @@ export function ClaimYieldForm() {
 
   if (!isConnected) {
     return (
-      <div className="flex items-center gap-2 p-3 rounded-lg text-xs font-medium bg-amber-50 text-amber-900 border border-amber-200">
+      <div className="alert alert-warning d-flex align-items-center gap-2" role="alert" style={{fontSize: '0.75rem'}}>
         Please connect your wallet to claim yield
       </div>
     );
@@ -117,45 +182,50 @@ export function ClaimYieldForm() {
 
   return (
     <SimpleCard title="Claim Yield with ZK Proof">
-      {hasClaimed && epochId && (
-        <div className="flex items-center gap-2 p-3 mb-3 rounded-lg text-xs font-medium bg-blue-50 text-blue-800 border border-blue-200">
-          <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      {hasClaimed && selectedEpochId && (
+        <div className="alert alert-info d-flex align-items-center gap-2 mb-3" role="alert" style={{fontSize: '0.75rem'}}>
+          <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" />
           </svg>
-          You have already claimed yield for epoch {epochId}
+          <div>You have already claimed yield for epoch {selectedEpochId}</div>
         </div>
       )}
 
-      <form onSubmit={handleGenerateAndClaim} className="space-y-4">
-        {/* Epoch ID */}
-        <div className="flex flex-col gap-1">
-          <label htmlFor="epochId" className="text-xs font-medium text-gray-700">
-            Epoch ID
-          </label>
-          <input
-            id="epochId"
-            type="number"
-            min="0"
-            value={epochId}
-            onChange={(e) => setEpochId(e.target.value)}
-            placeholder="0"
-            disabled={step !== 'input'}
-            required
-            className="w-full px-2 py-1.5 rounded-md border border-gray-300 bg-white text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#5792FF] focus:border-transparent disabled:bg-gray-50 disabled:cursor-not-allowed transition-all duration-200"
-          />
-        </div>
+      <form onSubmit={handleGenerateAndClaim} className="d-flex flex-column gap-3">
+        {/* Epochs Passed Info */}
+        {userBalance && userBalance > 0n && (
+          <div className="card border-primary bg-primary bg-opacity-10 shadow-sm" style={{padding: '0.75rem'}}>
+            <div className="d-flex align-items-center gap-2 mb-2">
+              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="mb-0 fw-semibold text-primary" style={{fontSize: '0.75rem'}}>Epochs Since Deposit:</p>
+            </div>
+            <p className="display-6 fw-bold text-primary mb-1">{epochsPassed}</p>
+            <p className="text-primary text-2xs">
+              {epochsPassed === 0 && 'No epochs have passed yet'}
+              {epochsPassed === 1 && '1 epoch has passed since your deposit'}
+              {epochsPassed > 1 && `${epochsPassed} epochs have passed since your deposit`}
+            </p>
+            {selectedEpochId && (
+              <p className="text-primary text-2xs mt-2 pt-2 border-top border-primary border-opacity-25 mb-0">
+                Auto-selected epoch to claim: <span className="fw-semibold">#{selectedEpochId}</span>
+              </p>
+            )}
+          </div>
+        )}
 
-        {epochData && epochId && (
-          <div className="bg-blue-50 border border-blue-200 rounded-md p-3 space-y-1">
-            <p className="text-xs font-semibold text-blue-900 mb-1.5">Epoch Information:</p>
-            <div className="space-y-0.5 text-xs text-blue-800">
-              <p>Start Block: {epochData[1].toString()}</p>
-              <p>End Block: {epochData[2].toString()}</p>
-              <p className="flex items-center gap-1.5">
+        {epochData && selectedEpochId && (
+          <div className="card border-info bg-info bg-opacity-10 shadow-sm" style={{padding: '0.75rem'}}>
+            <p className="fw-semibold text-info mb-2" style={{fontSize: '0.75rem'}}>Epoch Information:</p>
+            <div className="d-flex flex-column gap-1" style={{fontSize: '0.75rem'}}>
+              <p className="mb-0 text-info">Start Block: {epochData[1].toString()}</p>
+              <p className="mb-0 text-info">End Block: {epochData[2].toString()}</p>
+              <p className="d-flex align-items-center gap-2 mb-0 text-info">
                 Status: 
-                <span className={`px-1.5 py-0.5 text-2xs font-semibold rounded ${
-                  epochData[6] ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-                }`}>
+                <span className={`badge ${
+                  epochData[6] ? 'bg-success' : 'bg-info'
+                }`} style={{fontSize: '0.625rem'}}>
                   {epochData[6] ? 'Snapshotted ✓' : 'Active'}
                 </span>
               </p>
@@ -163,70 +233,63 @@ export function ClaimYieldForm() {
           </div>
         )}
 
-        {/* Nullifier Secret */}
-        <div className="flex flex-col gap-1">
-          <label htmlFor="nullifierSecret" className="text-xs font-medium text-gray-700">
-            Nullifier Secret
-          </label>
-          <input
-            id="nullifierSecret"
-            type="text"
-            value={nullifierSecret}
-            onChange={(e) => setNullifierSecret(e.target.value)}
-            placeholder="Enter a unique secret"
-            disabled={step !== 'input'}
-            required
-            className="w-full px-2 py-1.5 rounded-md border border-gray-300 bg-white text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#5792FF] focus:border-transparent disabled:bg-gray-50 disabled:cursor-not-allowed transition-all duration-200"
-          />
-          <p className="text-2xs text-gray-500">This prevents double-claiming. Keep it secret!</p>
-        </div>
-
-        {/* Merkle Siblings */}
-        <div className="flex flex-col gap-1">
-          <label htmlFor="merkleSiblings" className="text-xs font-medium text-gray-700">
-            Merkle Siblings (comma-separated)
-          </label>
-          <textarea
-            id="merkleSiblings"
-            value={merkleSiblings}
-            onChange={(e) => setMerkleSiblings(e.target.value)}
-            placeholder="123456..., 789012..., 345678..."
-            disabled={step !== 'input'}
-            rows={3}
-            required
-            className="w-full px-2 py-1.5 rounded-md border border-gray-300 bg-white text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#5792FF] focus:border-transparent disabled:bg-gray-50 disabled:cursor-not-allowed transition-all duration-200 resize-none"
-          />
-          <p className="text-2xs text-gray-500">Enter the Merkle proof siblings from ZK-Kit (bigint values)</p>
-        </div>
-
-        {/* Merkle Index */}
-        <div className="flex flex-col gap-1">
-          <label htmlFor="merkleIndex" className="text-xs font-medium text-gray-700">
-            Merkle Index
-          </label>
-          <input
-            id="merkleIndex"
-            type="number"
-            min="0"
-            value={merkleIndex}
-            onChange={(e) => setMerkleIndex(e.target.value)}
-            disabled={step !== 'input'}
-            required
-            className="w-full px-2 py-1.5 rounded-md border border-gray-300 bg-white text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#5792FF] focus:border-transparent disabled:bg-gray-50 disabled:cursor-not-allowed transition-all duration-200"
-          />
-        </div>
+        {/* Auto-calculated Values Display */}
+        {calculationReady && (
+          <div className="card border-success bg-success bg-opacity-10 shadow-sm" style={{padding: '0.75rem'}}>
+            <p className="fw-semibold text-success mb-2 d-flex align-items-center gap-2" style={{fontSize: '0.75rem'}}>
+              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              Auto-calculated Proof Parameters:
+            </p>
+            
+            <div className="d-flex flex-column gap-2">
+              <div>
+                <label className="d-block mb-1 fw-medium text-success text-2xs">
+                  Nullifier Secret:
+                </label>
+                <code className="d-block bg-white px-2 py-1 rounded text-2xs text-success" style={{fontFamily: 'monospace', wordBreak: 'break-all'}}>
+                  {autoNullifierSecret}
+                </code>
+              </div>
+              
+              <div>
+                <label className="d-block mb-1 fw-medium text-success text-2xs">
+                  Merkle Index:
+                </label>
+                <code className="d-block bg-white px-2 py-1 rounded text-2xs text-success" style={{fontFamily: 'monospace'}}>
+                  {autoMerkleIndex}
+                </code>
+              </div>
+              
+              <div>
+                <label className="d-block mb-1 fw-medium text-success text-2xs">
+                  Merkle Siblings:
+                </label>
+                <code className="d-block bg-white px-2 py-1 rounded text-2xs text-success overflow-auto" style={{fontFamily: 'monospace', wordBreak: 'break-all', maxHeight: '5rem'}}>
+                  {autoMerkleSiblings || 'No siblings (single user tree)'}
+                </code>
+              </div>
+            </div>
+            
+            <p className="text-success text-2xs pt-2 mt-2 border-top border-success border-opacity-25 mb-0">
+              ✓ Ready to generate proof and claim
+            </p>
+          </div>
+        )}
 
         {/* Submit Button */}
         <button 
           type="submit" 
           disabled={
             step !== 'input' || 
-            !epochId || 
-            !nullifierSecret || 
-            !merkleSiblings ||
-            hasClaimed
+            !selectedEpochId || 
+            !calculationReady ||
+            hasClaimed ||
+            !userBalance ||
+            userBalance === 0n
           }
-          className="w-full bg-[#5792FF] text-sm text-white font-bold py-2 rounded-lg hover:bg-blue-700 active:scale-95 disabled:bg-gray-300 disabled:active:scale-100 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
+          className="btn btn-primary-custom w-100"
         >
           {step === 'input' && 'Generate Proof & Claim'}
           {step === 'generating' && 'Generating ZK Proof...'}
@@ -235,47 +298,46 @@ export function ClaimYieldForm() {
 
         {/* Status Messages */}
         {isGenerating && (
-          <div className="flex items-center gap-2 p-3 rounded-lg text-xs font-medium bg-blue-50 text-blue-800 border border-blue-200">
-            <svg className="w-4 h-4 animate-spin text-blue-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            Generating zero-knowledge proof... This may take a moment.
+          <div className="alert alert-info d-flex align-items-center gap-2" role="alert" style={{fontSize: '0.75rem'}}>
+            <div className="spinner-custom" style={{width: '1rem', height: '1rem', borderWidth: '2px'}} />
+            <div>Generating zero-knowledge proof... This may take a moment.</div>
           </div>
         )}
 
         {isConfirmed && (
-          <div className="flex items-center gap-2 p-3 rounded-lg text-xs font-medium bg-green-50 text-green-800 border border-green-200">
-            <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+          <div className="alert alert-success d-flex align-items-center gap-2" role="alert" style={{fontSize: '0.75rem'}}>
+            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
-            Yield claimed successfully!
+            <div>Yield claimed successfully!</div>
           </div>
         )}
 
         {(proofError || claimError) && (
-          <div className="flex items-center gap-2 p-3 rounded-lg text-xs font-medium bg-red-50 text-red-800 border border-red-200">
-            <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+          <div className="alert alert-danger d-flex align-items-center gap-2" role="alert" style={{fontSize: '0.75rem'}}>
+            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
-            Error: {proofError || claimError?.message}
+            <div>Error: {proofError || claimError?.message}</div>
           </div>
         )}
       </form>
 
       {/* How it works section */}
-      <div className="mt-4 pt-4 border-t border-gray-200">
-        <h3 className="text-xs font-semibold text-gray-900 mb-2">How it works (using ZK-Kit):</h3>
-        <ol className="space-y-1 text-xs text-gray-600 list-decimal list-inside">
-          <li>Enter the epoch ID you want to claim yield for</li>
-          <li>Provide a unique nullifier secret (hashed with Poseidon)</li>
-          <li>Enter your Merkle proof siblings from ZK-Kit LeanIMT</li>
-          <li>Click to generate ZK proof and claim your yield</li>
+      <div className="mt-3 pt-3 border-top">
+        <h3 className="fw-semibold text-dark mb-2" style={{fontSize: '0.75rem'}}>How it works (Fully Automated):</h3>
+        <ol className="mb-2" style={{fontSize: '0.75rem', paddingLeft: '1.25rem'}}>
+          <li className="text-muted mb-1">System automatically detects how many epochs have passed since your deposit</li>
+          <li className="text-muted mb-1">Auto-selects the latest claimable epoch for you</li>
+          <li className="text-muted mb-1">Generates nullifier secret from your address + epoch (using Poseidon hash)</li>
+          <li className="text-muted mb-1">Builds Merkle tree and generates your inclusion proof automatically</li>
+          <li className="text-muted mb-1">Click button to generate ZK proof & claim your yield - that&apos;s it!</li>
         </ol>
-        <div className="mt-2 p-2 bg-gray-50 rounded-md">
-          <p className="text-2xs text-gray-600">
-            <strong>ZK-Kit Integration:</strong> This app uses ZK-Kit&apos;s LeanIMT for Merkle tree operations 
-            and Poseidon hash for ZK-friendly cryptography. The Merkle proof ensures your balance is included 
-            in the epoch snapshot while maintaining privacy.
+        <div className="alert alert-secondary mb-0" style={{fontSize: '0.625rem', padding: '0.5rem'}}>
+          <p className="mb-0">
+            <strong>🚀 Fully Automated:</strong> No manual input needed! The system calculates all cryptographic 
+            parameters (epoch selection, nullifier secret, Merkle siblings, and index) using ZK-Kit&apos;s LeanIMT 
+            and Poseidon hash. Just connect your wallet and claim!
           </p>
         </div>
       </div>

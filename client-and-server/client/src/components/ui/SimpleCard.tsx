@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import { cn } from "@/utils/helpers";
 
 interface SimpleCardProps {
   title: string;
@@ -17,35 +16,30 @@ export function SimpleCard({
   children,
   initialCollapsed = false,
   collapsible = false,
-  className,
+  className = "",
   headerAction,
 }: SimpleCardProps) {
   const [collapsed, setCollapsed] = useState(initialCollapsed);
 
   return (
-    <div
-      className={cn(
-        "text-xs bg-white text-gray-900 rounded-lg shadow-md p-4 mb-4 transition-shadow duration-300 hover:shadow-lg",
-        className
-      )}
-    >
-      <div className="flex items-center cursor-pointer mb-2" onClick={() => collapsible && setCollapsed(!collapsed)}>
+    <div className={`custom-card p-3 mb-3 ${className}`}>
+      <div 
+        className={`d-flex align-items-center mb-2 ${collapsible ? 'cursor-pointer' : ''}`}
+        onClick={() => collapsible && setCollapsed(!collapsed)}
+      >
         {collapsible && (
-          <span className="text-gray-600 mr-2">
+          <span className="text-muted me-2" style={{fontSize: '0.875rem'}}>
             {collapsed ? "▼" : "▲"}
           </span>
         )}
-        <h3 className="text-sm font-semibold flex-1">{title}</h3>
+        <h3 className="fw-semibold flex-grow-1 mb-0" style={{fontSize: '0.875rem'}}>{title}</h3>
         {headerAction && <div>{headerAction}</div>}
       </div>
-      <div
-        className={cn(
-          "transition-all duration-300",
-          collapsed ? "hidden" : "block"
-        )}
-      >
-        {children}
-      </div>
+      {!collapsed && (
+        <div>
+          {children}
+        </div>
+      )}
     </div>
   );
 }

@@ -38,8 +38,9 @@ export function DepositForm() {
 
   if (!isConnected) {
     return (
-      <div className="flex items-center gap-2 p-3 rounded-lg text-xs font-medium bg-amber-50 text-amber-900 border border-amber-200">
-        Please connect your wallet to deposit
+      <div className="alert alert-warning d-flex align-items-center gap-2" role="alert" style={{fontSize: '0.75rem'}}>
+        <span>⚠️</span>
+        <span>Please connect your wallet to deposit</span>
       </div>
     );
   }
@@ -48,7 +49,7 @@ export function DepositForm() {
 
   return (
     <SimpleCard title="Deposit to Yield Vault">
-      <form onSubmit={handleDeposit} className="space-y-4">
+      <form onSubmit={handleDeposit} className="d-flex flex-column gap-3">
         <AmountInput
           value={amount}
           onChange={setAmount}
@@ -64,14 +65,14 @@ export function DepositForm() {
         <button 
           type="submit" 
           disabled={isPending || isConfirming || !amount || parseFloat(amount) <= 0}
-          className="w-full bg-[#5792FF] text-sm text-white font-bold py-2 rounded-lg hover:bg-blue-700 active:scale-95 disabled:bg-gray-300 disabled:active:scale-100 transition-all duration-200 shadow-sm hover:shadow-md"
+          className="btn btn-primary-custom w-100"
         >
           {isPending ? 'Confirming...' : isConfirming ? 'Processing...' : 'Deposit'}
         </button>
 
         {isConfirmed && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-            <p className="text-green-800 font-medium text-xs">✓ Deposit successful!</p>
+          <div className="alert alert-success" role="alert" style={{fontSize: '0.75rem'}}>
+            <p className="mb-0 fw-medium">✓ Deposit successful!</p>
           </div>
         )}
       </form>

@@ -26,9 +26,9 @@ export function EpochList() {
 
   return (
     <SimpleCard title="Available Epochs" collapsible={true}>
-      <div className="space-y-2">
+      <div className="d-flex flex-column gap-2">
         {epochs.length === 0 ? (
-          <p className="text-xs text-gray-500 text-center py-3">No epochs available yet</p>
+          <p className="text-muted text-center py-3" style={{fontSize: '0.75rem'}}>No epochs available yet</p>
         ) : (
           epochs.map((epochId) => (
             <EpochCard key={epochId.toString()} epochId={epochId} />
@@ -50,41 +50,41 @@ function EpochCard({ epochId }: { epochId: bigint }) {
   const [, startBlock, endBlock, , totalYield, , snapshotted] = epochData;
 
   return (
-    <div className={`rounded-lg border p-3 transition-all ${
+    <div className={`rounded border p-3 ${
       snapshotted 
-        ? 'bg-green-50 border-green-200' 
-        : 'bg-blue-50 border-blue-200'
+        ? 'bg-success bg-opacity-10 border-success border-opacity-25' 
+        : 'bg-primary bg-opacity-10 border-primary border-opacity-25'
     }`}>
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-xs font-bold text-gray-900">Epoch #{epochId.toString()}</h3>
-        <span className={`px-2 py-0.5 text-2xs font-semibold rounded ${
+      <div className="d-flex align-items-center justify-content-between mb-2">
+        <h3 className="fw-bold text-dark mb-0" style={{fontSize: '0.75rem'}}>Epoch #{epochId.toString()}</h3>
+        <span className={`badge ${
           snapshotted 
-            ? 'bg-green-100 text-green-800' 
-            : 'bg-blue-100 text-blue-800'
-        }`}>
+            ? 'bg-success' 
+            : 'bg-primary'
+        }`} style={{fontSize: '0.625rem'}}>
           {snapshotted ? 'Complete' : 'Active'}
         </span>
       </div>
       
-      <div className="space-y-1.5">
-        <div className="flex justify-between text-xs">
-          <span className="text-gray-600">Blocks:</span>
-          <span className="font-mono text-gray-900 text-2xs">
+      <div className="d-flex flex-column gap-2">
+        <div className="d-flex justify-content-between" style={{fontSize: '0.75rem'}}>
+          <span className="text-muted">Blocks:</span>
+          <span className="text-dark text-2xs" style={{fontFamily: 'monospace'}}>
             {startBlock.toString()} → {endBlock.toString()}
           </span>
         </div>
         
         {snapshotted && (
           <>
-            <div className="flex justify-between text-xs">
-              <span className="text-gray-600">Total Yield:</span>
-              <span className="font-semibold text-gray-900 text-2xs">{totalYield.toString()}</span>
+            <div className="d-flex justify-content-between" style={{fontSize: '0.75rem'}}>
+              <span className="text-muted">Total Yield:</span>
+              <span className="fw-semibold text-dark text-2xs">{totalYield.toString()}</span>
             </div>
             
-            <div className="flex justify-between text-xs pt-1.5 border-t border-gray-200">
-              <span className="text-gray-600">Your Status:</span>
-              <span className={`font-semibold text-2xs ${
-                hasClaimed ? 'text-green-600' : 'text-orange-600'
+            <div className="d-flex justify-content-between pt-2 border-top" style={{fontSize: '0.75rem'}}>
+              <span className="text-muted">Your Status:</span>
+              <span className={`fw-semibold text-2xs ${
+                hasClaimed ? 'text-success' : 'text-warning'
               }`}>
                 {hasClaimed ? '✓ Claimed' : '○ Not Claimed'}
               </span>
