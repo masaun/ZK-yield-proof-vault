@@ -29,7 +29,8 @@ export default function DepositPage() {
       ) : (
         <div className="row g-3">
           {/* Main Content - Deposit Form */}
-          <div className="col-12 col-lg-8">\n            <DepositForm />
+          <div className="col-12 col-lg-8">
+            <DepositForm />
 
             {/* How It Works */}
             <SimpleCard 
@@ -46,7 +47,6 @@ export default function DepositPage() {
                   </div>
                   <span className="text-muted" style={{fontSize: '0.75rem'}}>
                     Deposits are recorded in your balance and included in the next epoch snapshot
-                    </span>
                   </span>
                 </li>
                 <li className="d-flex align-items-start gap-2">
