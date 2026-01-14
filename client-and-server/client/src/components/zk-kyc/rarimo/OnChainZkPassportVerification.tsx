@@ -13,10 +13,10 @@ import ZkPassportQrCode, { ProofRequestStatuses } from '@rarimo/zk-passport-reac
 import type { ZkProof } from '@rarimo/zk-passport'
 import { getRarimoConfig } from '@/config/rarimo'
 import { mantle, mantleSepolia, rarimo } from '@/config'
-import { useOnChainVerification } from '@/hooks/useOnChainVerification'
-import { Spinner } from './Spinner'
-import { CopyButton } from './CopyButton'
-import { DocsLink } from './DocsLink'
+import { useOnChainVerification } from '@/hooks/zk-kyc/rarimo/useOnChainVerification'
+import { Spinner } from '../../commons/Spinner'
+import { CopyButton } from '../../commons/CopyButton'
+import { DocsLink } from '../../commons/DocsLink'
 import { shortenAddress } from '@/utils/helpers'
 
 type ErrorType = 'estimate' | 'verification'
@@ -49,12 +49,7 @@ export function OnChainZkPassportVerification() {
   const network = chainId === 5000 ? 'mainnet' : chainId === 7368 ? 'rarimo' : 'testnet'
 
   // Get Rarimo configuration
-  let rarimoConfig: ReturnType<typeof getRarimoConfig> | undefined = undefined
-  try {
-    rarimoConfig = getRarimoConfig(network)
-  } catch (error) {
-    console.error('Failed to get Rarimo config:', error)
-  }
+  const rarimoConfig = getRarimoConfig(network)
 
   // Use the on-chain verification hook
   const {

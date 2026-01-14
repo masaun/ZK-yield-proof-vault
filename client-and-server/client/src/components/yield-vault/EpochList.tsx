@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useYieldVault, useEpochData, useHasClaimedEpoch } from '@/hooks/useYieldVault';
+import { useYieldVault, useEpochData, useHasClaimedEpoch } from '@/hooks/yield-vault/useYieldVault';
 import { useAccount } from 'wagmi';
 
 export function EpochList() {

@@ -34,12 +34,7 @@ export function RarimoZkPassportConnect() {
   const network = chainId === 5000 ? 'mainnet' : 'testnet';
 
   // Get Rarimo configuration based on network
-  let rarimoConfig;
-  try {
-    rarimoConfig = getRarimoConfig(network);
-  } catch (error) {
-    console.error('Failed to get Rarimo config:', error);
-  }
+  const rarimoConfig = getRarimoConfig(network);
 
   const handleOpenQrCode = () => {
     if (!address) {

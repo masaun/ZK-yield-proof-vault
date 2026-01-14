@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useYieldVault } from '@/hooks/useYieldVault';
+import { useYieldVault } from '@/hooks/yield-vault/useYieldVault';
 import { useAccount } from 'wagmi';
 
 export function DepositForm() {

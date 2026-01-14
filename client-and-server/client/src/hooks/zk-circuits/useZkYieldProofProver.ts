@@ -6,9 +6,9 @@ import {
   formatProofForContract,
   type ProofInputs,
   type ProofOutput 
-} from '@/services/zkProof';
+} from '@/zk-circuits/zkYieldProofProver';
 
-export function useZKProof() {
+export function useZkYieldProofProver() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [proofOutput, setProofOutput] = useState<ProofOutput | null>(null);
