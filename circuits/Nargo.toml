@@ -3,7 +3,7 @@ name = "zk_yield_proof_vault"  # NOTE: Hyphens can not be used for the package n
 type = "bin"
 authors = ["masaun"]
 compiler_version = ">=1.0.0"
-version = "0.0.1"
+version = "0.0.2"
 
 [dependencies]
 # @dev - Merkle Tree (ZK-Kit in Noir: https://github.com/zk-kit/zk-kit.noir/tree/main/packages/merkle-trees#usage)

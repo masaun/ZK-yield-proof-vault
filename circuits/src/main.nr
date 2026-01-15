@@ -55,7 +55,13 @@ fn main(
     assert_eq(latest_user_balance_root, expected_latest_user_balance_root);
 
     // @dev - Constraint: Correct Yield Formula
-    assert_eq(latest_user_yield, latest_user_balance * yield_rate * (epoch_end - epoch_start));
+    // Convert to Field to avoid u64 overflow
+    let balance_field = latest_user_balance as Field;
+    let yield_rate_field = yield_rate as Field;
+    let duration_field = (epoch_end - epoch_start) as Field;
+    let expected_yield_field = balance_field * yield_rate_field * duration_field;
+    let actual_yield_field = latest_user_yield as Field;
+    assert_eq(actual_yield_field, expected_yield_field);
 
     // @dev - Constraint: Compliance Constraint (Optional)
     assert_eq(kyc_eligibility_flags, true);
