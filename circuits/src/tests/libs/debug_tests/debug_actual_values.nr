@@ -19,7 +19,7 @@ fn test_with_actual_browser_values() {
     let client_leaf = poseidon2::Poseidon2::hash(inputs_for_leaf, inputs_for_leaf.len());
     
     println(f"Client calculated leaf: {client_leaf}");
-    println(f"Expected hex: 0xada5f2711176d084216de8492df94ba49d6188062c89556f6b8f74f588ab2d5");  
+    println(f"Expected hex: 0xada5f2711176d084216de8492df94ba49d6188062c89556f6b8f74f588ab2d5"); // @dev - This expected value should be replaced based on the actual EVM address of "user_address" above
     
     // What the client thinks the root should be
     let expected_latest_user_balance_root = client_leaf; // Single entry tree
