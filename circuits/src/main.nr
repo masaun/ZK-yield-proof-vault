@@ -1,7 +1,7 @@
 mod tests;
 mod libs;
 
-use poseidon::poseidon;         // @dev - Poseidon Hash (compatible with circomlibjs)
+use poseidon::poseidon::bn254;         // @dev - Poseidon Hash (compatible with circomlibjs)
 //use std::hash::pedersen_hash;  // @dev - Pedersen Hash function
 
 use libs::{
@@ -37,7 +37,7 @@ fn main(
 ) -> pub (Field, Field) {
     // @dev - Hash
     let inputs_for_leaf = [user_address, latest_user_balance as Field, latest_block_number as Field]; // @dev - [TODO]: Add a salt value for better security
-    let latest_user_balance_leaf = poseidon::bn254::hash_3(inputs_for_leaf);
+    let latest_user_balance_leaf = bn254::hash_3(inputs_for_leaf);
 
     // @dev - Update the Merkle tree with the user's balance and retrieve the new Merkle root of the user balances as the return value
     let latest_user_balance_root = update_merkle_tree(latest_user_balance_leaf, last_user_balance_root, []);
@@ -62,7 +62,7 @@ fn main(
 
     // @dev - Calculate a nullifier in order for each deposit to prevent double-spending
     let inputs_for_nullifier = [user_address, latest_block_number as Field, latest_user_balance_leaf, latest_user_balance_root];
-    let nullifier = poseidon::bn254::hash_4(inputs_for_nullifier);
+    let nullifier = bn254::hash_4(inputs_for_nullifier);
 
     // @dev - Constraint: Correct nullifier
     assert_eq(nullifier, expected_nullifier);

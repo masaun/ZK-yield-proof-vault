@@ -1,10 +1,10 @@
 use trees::merkle::MerkleTree; // @dev - Merkle Tree (https://github.com/zk-kit/zk-kit.noir/tree/main/packages/merkle-trees)
 use trees::types::{MT_Creator, Modifier, MembershipProver};
-use poseidon::poseidon;         // @dev - Poseidon Hash (compatible with circomlibjs)
+use poseidon::poseidon::bn254;         // @dev - Poseidon Hash (compatible with circomlibjs)
 //use std::hash::pedersen_hash;  // @dev - Pedersen Hash
 
 pub fn hasher(leaves: [Field; 2]) -> Field {
-    let hash = poseidon::bn254::hash_2(leaves);
+    let hash = bn254::hash_2(leaves);
     //let hash = pedersen_hash(leaves)
     hash
 }
