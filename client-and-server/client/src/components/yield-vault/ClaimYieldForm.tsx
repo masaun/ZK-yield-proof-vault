@@ -180,7 +180,26 @@ export function ClaimYieldForm() {
       const expectedRoot = epochData[5] as `0x${string}`;
       const calculatedRoot = '0x' + root.toString(16).padStart(64, '0');
       
+      console.log('Merkle root verification:', {
+        calculated: calculatedRoot,
+        expected: expectedRoot,
+        epoch: selectedEpochId,
+        snapshotted: epochData[6],
+        activeBalancesCount: activeBalances.length
+      });
+      
+      // Check if epoch has a zero balance root (improperly snapshotted)
+      const isZeroRoot = expectedRoot === '0x0000000000000000000000000000000000000000000000000000000000000000';
+      
       if (calculatedRoot.toLowerCase() !== expectedRoot.toLowerCase()) {
+        if (isZeroRoot) {
+          console.error('Epoch has zero balance root - it was not properly snapshotted!', {
+            epoch: selectedEpochId,
+            snapshotted: epochData[6]
+          });
+          setCalculationReady(false);
+          return;
+        }
         console.error('Merkle root mismatch!', {
           calculated: calculatedRoot,
           expected: expectedRoot,
@@ -450,6 +469,17 @@ export function ClaimYieldForm() {
                 </span>
               </p>
             </div>
+            {epochData[6] && epochData[5] === '0x0000000000000000000000000000000000000000000000000000000000000000' && (
+              <div className="alert alert-danger mt-2 mb-0 d-flex align-items-start gap-2" role="alert" style={{fontSize: '0.65rem', padding: '0.5rem'}}>
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="flex-shrink-0 mt-1">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <div>
+                  <strong>Invalid Snapshot:</strong> This epoch was snapshotted with a zero balance root. 
+                  It needs to be re-snapshotted with the correct balance root to enable claims.
+                </div>
+              </div>
+            )}
           </div>
         )}
 
