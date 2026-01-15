@@ -26,6 +26,9 @@ export function ClaimYieldForm() {
   const [snapshotError, setSnapshotError] = useState<string>('');
   const [snapshotSuccess, setSnapshotSuccess] = useState(false);
   
+  // Track which operation is in progress to show correct notification
+  const [currentOperation, setCurrentOperation] = useState<'snapshot' | 'claim' | null>(null);
+  
   const { isConnected, address } = useAccount();
   const chainId = useChainId();
   const { 
@@ -44,7 +47,7 @@ export function ClaimYieldForm() {
   // Get epochs passed from contract
   const { epochsPassed: contractEpochsPassed } = useEpochsPassedSinceDeposit();
   const { depositInfo } = useUserDepositInfo();
-  const { depositorsData } = useAllDepositorsWithBalances();
+  const { depositorsData, refetch: refetchDepositorsData } = useAllDepositorsWithBalances();
   const { currentBalanceRoot, totalYield: calculatedTotalYield } = useSnapshotData();
   
   const { 
@@ -67,7 +70,7 @@ export function ClaimYieldForm() {
   }, [currentEpochId]);
 
   const epochIdBigInt = selectedEpochId ? BigInt(selectedEpochId) : undefined;
-  const { epochData } = useEpochData(epochIdBigInt);
+  const { epochData, refetch: refetchEpochData } = useEpochData(epochIdBigInt);
   const { hasClaimed } = useHasClaimedEpoch(epochIdBigInt);
 
   // Use epochs passed from contract, fallback to current calculation
@@ -76,6 +79,54 @@ export function ClaimYieldForm() {
     : (currentEpochId !== undefined && userBalance && userBalance > 0n
         ? Number(currentEpochId)
         : 0);
+
+  // Handle snapshot confirmation
+  useEffect(() => {
+    if (isConfirmed && currentOperation === 'snapshot' && depositorsData && currentEpochId !== undefined && chainId) {
+      // Transaction confirmed, save snapshot data
+      const [addresses, balances] = depositorsData as [readonly `0x${string}`[], readonly bigint[]];
+      
+      // We need to recalculate the balance root to save it
+      let balanceRoot: string;
+      if (addresses.length > 0 && balances.length > 0) {
+        const userBalances: UserBalance[] = addresses.map((addr, i) => ({
+          address: addr,
+          balance: balances[i],
+        }));
+        const { root } = buildMerkleTree(userBalances);
+        balanceRoot = '0x' + root.toString(16).padStart(64, '0');
+      } else {
+        balanceRoot = '0x0000000000000000000000000000000000000000000000000000000000000000';
+      }
+      
+      saveEpochSnapshot({
+        epochId: currentEpochId.toString(),
+        addresses: Array.from(addresses),
+        balances: balances.map(b => b.toString()),
+        balanceRoot: balanceRoot,
+        timestamp: Date.now(),
+        chainId,
+      });
+      
+      console.log(`Snapshot confirmed and saved for epoch ${currentEpochId}`);
+      setSnapshotSuccess(true);
+      setIsSnapshotting(false);
+      
+      // Refetch epoch ID, depositors data, and epoch data after delay
+      setTimeout(async () => {
+        await refetchEpochId();
+        await refetchDepositorsData();
+        // Wait a bit more then refetch the specific epoch data
+        setTimeout(async () => {
+          if (refetchEpochData) {
+            await refetchEpochData();
+          }
+        }, 1000);
+        setSnapshotSuccess(false);
+        setCurrentOperation(null);
+      }, 3000);
+    }
+  }, [isConfirmed, currentOperation, depositorsData, currentEpochId, chainId, refetchEpochId, refetchDepositorsData, refetchEpochData]);
 
   // Auto-calculate Merkle proof and nullifier when epoch is selected
   useEffect(() => {
@@ -169,6 +220,7 @@ export function ClaimYieldForm() {
     setIsSnapshotting(true);
     setSnapshotError('');
     setSnapshotSuccess(false);
+    setCurrentOperation('snapshot');
 
     try {
       // Calculate balance root from depositors data
@@ -205,30 +257,8 @@ export function ClaimYieldForm() {
       // Call snapshot function - this initiates the transaction
       await snapshotEpoch(balanceRoot as `0x${string}`, totalYieldValue);
 
-      // Note: The success state and data saving should happen after confirmation
-      // For now, we'll wait for the transaction to be mined
-      // The isConfirming state from useYieldVault will handle the pending state
-      
-      // Save snapshot data after transaction is sent (will be confirmed via wagmi hooks)
-      // This allows users to see pending state before confirmation
-      setTimeout(() => {
-        saveEpochSnapshot({
-          epochId: currentEpochId.toString(),
-          addresses: Array.from(addresses),
-          balances: balances.map(b => b.toString()),
-          balanceRoot: balanceRoot,
-          timestamp: Date.now(),
-          chainId,
-        });
-        
-        setSnapshotSuccess(true);
-        
-        // Refetch epoch ID and hide success message after delay
-        setTimeout(async () => {
-          await refetchEpochId();
-          setSnapshotSuccess(false);
-        }, 3000);
-      }, 2000); // Wait 2 seconds for transaction to start confirming
+      // Note: Success notification and data saving will happen after confirmation
+      // via the useEffect hook that watches isConfirmed state
 
     } catch (err: any) {
       console.error('Snapshot error:', err);
@@ -270,6 +300,9 @@ export function ClaimYieldForm() {
     }
 
     try {
+      // Set operation type to 'claim'
+      setCurrentOperation('claim');
+      
       // Step 1: Generate proof
       setStep('generating');
       
@@ -471,10 +504,24 @@ export function ClaimYieldForm() {
           <button 
             type="button"
             onClick={handleSnapshotEpoch}
-            disabled={isSnapshotting || !depositorsData || currentEpochId === undefined}
+            disabled={isSnapshotting || (currentOperation === 'snapshot' && (isPending || isConfirming)) || !depositorsData || currentEpochId === undefined}
             className="btn btn-warning btn-sm w-100"
           >
-            {isSnapshotting ? 'Snapshotting...' : 'Snapshot Current Epoch'}
+            {currentOperation === 'snapshot' && isPending && (
+              <>
+                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Confirming...
+              </>
+            )}
+            {currentOperation === 'snapshot' && isConfirming && (
+              <>
+                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Processing...
+              </>
+            )}
+            {(currentOperation !== 'snapshot' || (!isPending && !isConfirming)) && (
+              isSnapshotting ? 'Preparing...' : 'Snapshot Current Epoch'
+            )}
           </button>
           
           {snapshotSuccess && (
@@ -522,7 +569,7 @@ export function ClaimYieldForm() {
           </div>
         )}
 
-        {isConfirmed && (
+        {isConfirmed && currentOperation === 'claim' && (
           <div className="alert alert-success d-flex align-items-center gap-2" role="alert" style={{fontSize: '0.75rem'}}>
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
