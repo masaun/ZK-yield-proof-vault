@@ -32,7 +32,8 @@ echo "Gate count:"
 bb gates -b target/zk_yield_proof_vault.json | jq '.functions[0].circuit_size'
 
 # Create version-specific directory
-mkdir -p "../app/circuits/zk-yield-proof-vault-$VERSION"
+mkdir -p "../client-and-server/circuits/zk-yield-proof-vault-$VERSION"
+#mkdir -p "../app/circuits/zk-yield-proof-vault-$VERSION"
 mkdir -p "target/vk"
 
 echo "Copying zk-yield-proof-vault.json to app/circuits/zk-yield-proof-vault-$VERSION..."
