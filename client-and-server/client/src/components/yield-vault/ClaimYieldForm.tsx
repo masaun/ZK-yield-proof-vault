@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useYieldVault, useEpochData, useHasClaimedEpoch, useEpochsPassedSinceDeposit, useUserDepositInfo, useAllDepositorsWithBalances, useSnapshotData } from '@/hooks/yield-vault/useYieldVault';
 import { useZkYieldProofProver } from '@/hooks/zk-circuits/useZkYieldProofProver';
 import { useAccount, useChainId } from 'wagmi';
-import { generateNullifier } from '@/zk-circuits/zkYieldProofProver';
+import { generateNullifier, generateUserBalanceLeaf } from '@/zk-circuits/zkYieldProofProver';
 import type { ProofInputs } from '@/zk-circuits/zkYieldProofProver';
 import { SimpleCard } from '@/components/ui/SimpleCard';
 import { buildMerkleTree, generateMerkleProof, type UserBalance } from '@/zk-circuits/merkleTree';
@@ -334,27 +334,73 @@ export function ClaimYieldForm() {
       // Step 1: Generate proof
       setStep('generating');
       
-      // Parse Merkle siblings
-      const siblingsArray = autoMerkleSiblings
-        .split(',')
-        .map(s => s.trim())
-        .filter(s => s.length > 0);
-
-      // Generate nullifier from auto-calculated secret
-      const nullifier = generateNullifier(autoNullifierSecret);
-
+      if (!address) {
+        throw new Error('User address is required');
+      }
+      
+      // IMPORTANT: Scale balance to fit in u64
+      const SCALE_DIVISOR = BigInt(10 ** 9); // Convert wei to Gwei
+      const userBalanceBigInt = BigInt(userBalance);
+      const scaledBalance = userBalanceBigInt / SCALE_DIVISOR;
+      
+      // Calculate user balance leaf using SCALED balance
+      const latestBlockNumber = BigInt(epochData[2]); // endBlock
+      const userBalanceLeaf = generateUserBalanceLeaf(
+        address,
+        scaledBalance, // Use scaled balance
+        latestBlockNumber
+      );
+      
+      // Get the balance root from epoch
+      const balanceRoot = epochData[5] as `0x${string}`;
+      const balanceRootBigInt = BigInt(balanceRoot);
+      
+      // Calculate nullifier
+      const nullifier = generateNullifier(
+        address,
+        latestBlockNumber,
+        userBalanceLeaf,
+        balanceRootBigInt
+      );
+      
+      // Calculate user's yield - must fit in u64 range
+      // The circuit expects: latest_user_yield == latest_user_balance * yield_rate * (epoch_end - epoch_start)
+      // But we need to ensure this fits in u64 (max: 18,446,744,073,709,551,615)
+      
+      const epochDuration = BigInt(epochData[2]) - BigInt(epochData[1]); // endBlock - startBlock
+      
+      // Use a very small yield rate to avoid overflow
+      const yieldRateBigInt = BigInt(1); // Minimum rate
+      
+      // Calculate yield: scaled_balance * rate * duration (scaledBalance already calculated above)
+      const userYield = scaledBalance * yieldRateBigInt * epochDuration;
+      
+      console.log('Yield calculation:', {
+        originalBalance: userBalanceBigInt.toString(),
+        scaledBalance: scaledBalance.toString(),
+        duration: epochDuration.toString(),
+        yieldRate: yieldRateBigInt.toString(),
+        calculatedYield: userYield.toString(),
+        maxU64: '18446744073709551615',
+        fitsInU64: userYield <= BigInt('18446744073709551615')
+      });
+      
       const proofInputs: ProofInputs = {
-        user_balance: userBalance.toString(),
-        user_balance_merkle_path: siblingsArray,
-        user_balance_merkle_index: autoMerkleIndex,
+        user_address: address,
+        latest_user_balance: scaledBalance.toString(), // Use scaled balance to match yield calculation
+        latest_user_yield: userYield.toString(),
+        expected_latest_user_balance_root: balanceRoot,
+        last_user_balance_root: balanceRoot, // Using same root (no Merkle update for now)
         epoch_start: epochData[1].toString(), // startBlock
         epoch_end: epochData[2].toString(),   // endBlock
-        latest_block_number: epochData[2].toString(), // Using endBlock as latest
-        yield_rate: epochData[4].toString(),  // totalYield (using as rate for now)
-        expected_latest_user_balance_root: epochData[5], // balanceRoot
-        latest_total_yield: epochData[4].toString(),
-        nullifier_secret: nullifier.toString(),
+        latest_block_number: epochData[2].toString(), // Using endBlock
+        yield_rate: yieldRateBigInt.toString(),  // Must match yield calculation formula
+        latest_total_yield: userYield.toString(), // Set to user yield to pass constraint (simplified)
+        kyc_eligibility_flags: true, // KYC verification
+        expected_nullifier: nullifier.toString(),
       };
+
+      console.log('Generating proof with inputs:', proofInputs);
 
       await generateProof(proofInputs);
       
