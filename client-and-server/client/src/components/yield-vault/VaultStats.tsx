@@ -46,7 +46,9 @@ export function VaultStats() {
     },
     {
       label: 'Yield Rate',
-      value: yieldRate !== undefined ? `${yieldRate.toString()}%` : 'Loading...',
+      value: yieldRate !== undefined 
+        ? `${(parseFloat(formatEther(yieldRate)) * 100).toFixed(4)}%` 
+        : 'Loading...',
       icon: '📈',
     },
   ];
