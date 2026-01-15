@@ -10,6 +10,7 @@ const navItems = [
   { name: 'Deposit', href: '/deposit' },
   { name: 'Withdraw', href: '/withdraw' },
   { name: 'Claim', href: '/claim' },
+  { name: 'Snapshot', href: '/snapshot-epoch' },
   { name: 'ZK-KYC', href: '/zk-kyc' },
 ];
 

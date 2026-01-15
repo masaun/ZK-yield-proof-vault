@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useYieldVault, useEpochData, useHasClaimedEpoch, useEpochsPassedSinceDeposit, useUserDepositInfo, useAllDepositorsWithBalances } from '@/hooks/yield-vault/useYieldVault';
 import { useZkYieldProofProver } from '@/hooks/zk-circuits/useZkYieldProofProver';
-import { useAccount } from 'wagmi';
+import { useAccount, useChainId } from 'wagmi';
 import { generateNullifier } from '@/zk-circuits/zkYieldProofProver';
 import type { ProofInputs } from '@/zk-circuits/zkYieldProofProver';
 import { SimpleCard } from '@/components/ui/SimpleCard';
 import { buildMerkleTree, generateMerkleProof, type UserBalance } from '@/zk-circuits/merkleTree';
 import { poseidon1 } from 'poseidon-lite';
+import { getEpochSnapshot } from '@/utils/snapshotStorage';
 
 export function ClaimYieldForm() {
   const [step, setStep] = useState<'input' | 'generating' | 'claiming'>('input');
@@ -21,6 +22,7 @@ export function ClaimYieldForm() {
   const [selectedEpochId, setSelectedEpochId] = useState<string>('');
   
   const { isConnected, address } = useAccount();
+  const chainId = useChainId();
   const { 
     claimYield, 
     isPending, 
@@ -69,7 +71,7 @@ export function ClaimYieldForm() {
 
   // Auto-calculate Merkle proof and nullifier when epoch is selected
   useEffect(() => {
-    if (!selectedEpochId || !address || !epochData || !userBalance || !depositorsData) {
+    if (!selectedEpochId || !address || !epochData || !userBalance || !chainId) {
       setCalculationReady(false);
       return;
     }
@@ -79,16 +81,35 @@ export function ClaimYieldForm() {
       const secretInput = poseidon1([BigInt(address), BigInt(selectedEpochId)]);
       setAutoNullifierSecret(secretInput.toString());
 
-      // 2. Build Merkle tree with ACTUAL user balances from contract
-      const [addresses, balances] = depositorsData as [readonly `0x${string}`[], readonly bigint[]];
+      // 2. Try to get historical snapshot data for this epoch
+      const snapshot = getEpochSnapshot(chainId, selectedEpochId);
       
-      const actualBalances: UserBalance[] = addresses.map((addr, index) => ({
-        address: addr,
-        balance: balances[index],
-      }));
-
-      // Filter out users with zero balance
-      const activeBalances = actualBalances.filter(ub => ub.balance > 0n);
+      let activeBalances: UserBalance[];
+      
+      if (snapshot) {
+        // Use historical snapshot data
+        console.log(`Using saved snapshot data for epoch ${selectedEpochId}`);
+        activeBalances = snapshot.addresses.map((addr, i) => ({
+          address: addr,
+          balance: BigInt(snapshot.balances[i]),
+        })).filter(ub => ub.balance > 0n);
+      } else {
+        // Fallback to current balances (for backwards compatibility or if snapshot wasn't saved)
+        console.warn(`No saved snapshot found for epoch ${selectedEpochId}, using current balances`);
+        
+        if (!depositorsData) {
+          console.error('No depositors data available');
+          setCalculationReady(false);
+          return;
+        }
+        
+        const [addresses, balances] = depositorsData as [readonly `0x${string}`[], readonly bigint[]];
+        
+        activeBalances = addresses.map((addr, index) => ({
+          address: addr,
+          balance: balances[index],
+        })).filter(ub => ub.balance > 0n);
+      }
       
       if (activeBalances.length === 0) {
         console.error('No active depositors found');
@@ -96,8 +117,22 @@ export function ClaimYieldForm() {
         return;
       }
 
-      // Build Merkle tree (tree is implicitly used in generateMerkleProof)
-      buildMerkleTree(activeBalances);
+      // Build Merkle tree from the correct historical balances
+      const { root } = buildMerkleTree(activeBalances);
+      
+      // Verify the root matches the epoch's stored balance root
+      const expectedRoot = epochData[5] as `0x${string}`;
+      const calculatedRoot = '0x' + root.toString(16).padStart(64, '0');
+      
+      if (calculatedRoot.toLowerCase() !== expectedRoot.toLowerCase()) {
+        console.error('Merkle root mismatch!', {
+          calculated: calculatedRoot,
+          expected: expectedRoot,
+          epoch: selectedEpochId
+        });
+        setCalculationReady(false);
+        return;
+      }
       
       // 3. Generate Merkle proof for current user
       const proof = generateMerkleProof(activeBalances, address);
@@ -106,15 +141,16 @@ export function ClaimYieldForm() {
         setAutoMerkleSiblings(proof.siblings.map(s => s.toString()).join(', '));
         setAutoMerkleIndex(proof.index.toString());
         setCalculationReady(true);
+        console.log('Proof parameters calculated successfully');
       } else {
-        console.error('Failed to generate Merkle proof');
+        console.error('Failed to generate Merkle proof - user not found in tree');
         setCalculationReady(false);
       }
     } catch (error) {
       console.error('Error calculating proof parameters:', error);
       setCalculationReady(false);
     }
-  }, [selectedEpochId, address, epochData, userBalance, depositorsData]);
+  }, [selectedEpochId, address, epochData, userBalance, depositorsData, chainId]);
 
   const handleGenerateAndClaim = async (e: React.FormEvent) => {
     e.preventDefault();

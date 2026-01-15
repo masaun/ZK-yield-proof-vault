@@ -1,7 +1,7 @@
 'use client';
 
-import { useReadContract, useWriteContract, useWaitForTransactionReceipt, useAccount, useChainId } from 'wagmi';
-import { YieldVaultABI } from '@/contracts/abis/YieldVault.abi';
+import { useReadContract, useWriteContract, useWaitForTransactionReceipt, useAccount, useChainId, useBlockNumber } from 'wagmi';
+import { YieldVaultABI } from '@/contracts/abis/yield-vault/YieldVault.abi';
 import { getContractAddresses } from '@/contracts/contract-addresses/addresses';
 import { parseEther } from 'viem';
 
@@ -53,6 +53,27 @@ export function useYieldVault() {
       enabled: !!vaultAddress,
     },
   });
+
+  const { data: owner } = useReadContract({
+    address: vaultAddress,
+    abi: YieldVaultABI,
+    functionName: 'owner',
+    query: {
+      enabled: !!vaultAddress,
+    },
+  });
+
+  const { data: currentBalanceRoot } = useReadContract({
+    address: vaultAddress,
+    abi: YieldVaultABI,
+    functionName: 'currentBalanceRoot',
+    query: {
+      enabled: !!vaultAddress,
+    },
+  });
+
+  // Check if the current user is the owner
+  const isOwner = address && owner ? (address.toLowerCase() === owner.toLowerCase()) : undefined;
 
   // Write functions
   const deposit = async (amount: string) => {
@@ -125,6 +146,32 @@ export function useYieldVault() {
     });
   };
 
+  const snapshotEpoch = async (balanceRoot: `0x${string}`, totalYield: string) => {
+    if (!vaultAddress) throw new Error('Vault address not found for this network');
+    if (!address) throw new Error('Wallet not connected');
+    
+    try {
+      const totalYieldBigInt = BigInt(totalYield);
+      console.log('Preparing epoch snapshot:', {
+        vaultAddress,
+        balanceRoot,
+        totalYield,
+        totalYieldBigInt: totalYieldBigInt.toString(),
+        from: address,
+      });
+      
+      return writeContract({
+        address: vaultAddress,
+        abi: YieldVaultABI,
+        functionName: 'snapshotEpoch',
+        args: [balanceRoot, totalYieldBigInt],
+      });
+    } catch (err) {
+      console.error('Snapshot epoch error:', err);
+      throw err;
+    }
+  };
+
   return {
     // Contract address
     vaultAddress,
@@ -134,11 +181,15 @@ export function useYieldVault() {
     totalDeposits,
     currentEpochId,
     yieldRate,
+    owner,
+    isOwner,
+    currentBalanceRoot,
     
     // Write functions
     deposit,
     withdraw,
     claimYield,
+    snapshotEpoch,
     
     // Transaction state
     hash,
@@ -273,5 +324,103 @@ export function useAllDepositorsWithBalances() {
   return {
     depositorsData,
     refetch,
+  };
+}
+
+export function useSnapshotData() {
+  const chainId = useChainId();
+  const vaultAddress = getContractAddresses(chainId)?.vault;
+
+  // Get current block number from the blockchain
+  const { data: currentBlockNumber } = useBlockNumber({
+    watch: true,
+  });
+
+  // Get current balance root
+  const { data: currentBalanceRoot, refetch: refetchBalanceRoot } = useReadContract({
+    address: vaultAddress,
+    abi: YieldVaultABI,
+    functionName: 'currentBalanceRoot',
+    query: {
+      enabled: !!vaultAddress,
+    },
+  });
+
+  // Get yield rate
+  const { data: yieldRate } = useReadContract({
+    address: vaultAddress,
+    abi: YieldVaultABI,
+    functionName: 'yieldRate',
+    query: {
+      enabled: !!vaultAddress,
+    },
+  });
+
+  // Get current epoch data
+  const { data: currentEpochId } = useReadContract({
+    address: vaultAddress,
+    abi: YieldVaultABI,
+    functionName: 'currentEpochId',
+    query: {
+      enabled: !!vaultAddress,
+    },
+  });
+
+  const { data: epochData } = useReadContract({
+    address: vaultAddress,
+    abi: YieldVaultABI,
+    functionName: 'getEpoch',
+    args: currentEpochId !== undefined ? [currentEpochId] : undefined,
+    query: {
+      enabled: !!vaultAddress && currentEpochId !== undefined,
+    },
+  });
+
+  // Get total deposits
+  const { data: totalDeposits } = useReadContract({
+    address: vaultAddress,
+    abi: YieldVaultABI,
+    functionName: 'totalDeposits',
+    query: {
+      enabled: !!vaultAddress,
+    },
+  });
+
+  // Calculate total yield
+  // Formula: totalDeposits * yieldRate * (currentBlock - epochStartBlock) / 1e18
+  const calculateTotalYield = () => {
+    if (!totalDeposits || !yieldRate || !epochData || !currentBlockNumber) {
+      return 0n;
+    }
+
+    // epochData format: [epochId, startBlock, endBlock, totalDeposits, totalYield, balanceRoot, snapshotted]
+    const startBlock = epochData[1] as bigint;
+    const currentBlock = BigInt(currentBlockNumber);
+    
+    // Calculate blocks passed
+    const blocksPassed = currentBlock > startBlock ? currentBlock - startBlock : 0n;
+    
+    // Calculate yield: totalDeposits * yieldRate * blocksPassed / 1e18
+    const totalYield = (totalDeposits * yieldRate * blocksPassed) / BigInt(1e18);
+    
+    // Ensure the value fits in uint64 (max: 18,446,744,073,709,551,615)
+    const MAX_UINT64 = 18446744073709551615n;
+    if (totalYield > MAX_UINT64) {
+      console.warn('Total yield exceeds uint64 max, capping at max value');
+      return MAX_UINT64;
+    }
+    
+    return totalYield;
+  };
+
+  const totalYield = calculateTotalYield();
+
+  return {
+    currentBalanceRoot: currentBalanceRoot as `0x${string}` | undefined,
+    totalYield,
+    yieldRate,
+    epochData,
+    currentBlockNumber,
+    refetchBalanceRoot,
   };
 }
