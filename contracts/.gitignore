@@ -18,6 +18,7 @@ docs/
 # Foundry
 foundry.lock
 deployment.log
+deployment-output.log
 
 # Others
 DS_Store

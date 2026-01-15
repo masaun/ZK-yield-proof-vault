@@ -4,7 +4,7 @@ use poseidon::poseidon2;
 #[test]
 fn test_debug_merkle_root() {
     // Use the exact values from the browser console
-    let user_address: Field = 0xd3BFFc0CD419344649deC61f08912a4Af283E1a6;
+    let user_address: Field = 0xfdbffc0cd419344649dec61f08912a4af283e1a6; // @dev - Here is an example address - So, please replace with actual EVM address used in the frontend
     let latest_user_balance: Field = 100000000;
     let latest_block_number: Field = 33467205;
     

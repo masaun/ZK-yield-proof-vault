@@ -1,4 +1,4 @@
-export const YieldVaultABI = [
+[
   {
     "type": "constructor",
     "inputs": [
@@ -652,4 +652,4 @@ export const YieldVaultABI = [
     "name": "Unauthorized",
     "inputs": []
   }
-] as const;
+]

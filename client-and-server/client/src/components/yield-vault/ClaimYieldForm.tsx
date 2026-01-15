@@ -125,6 +125,30 @@ export function ClaimYieldForm() {
     }
   }, [isConfirmed, currentOperation, pendingSnapshot, chainId, refetchEpochId, refetchDepositorsData, refetchEpochData]);
 
+  // Handle claim confirmation
+  useEffect(() => {
+    if (isConfirmed && currentOperation === 'claim') {
+      // Transaction confirmed, reset form after successful claim
+      console.log('Claim transaction confirmed!');
+      
+      // Reset form state
+      setSelectedEpochId('');
+      setAutoNullifierSecret('');
+      setAutoMerkleSiblings('');
+      setAutoMerkleIndex('0');
+      setCalculationReady(false);
+      setStep('input');
+      
+      // Refetch balance after confirmation
+      refetchBalance();
+      
+      // Clear operation after a delay to show success message
+      setTimeout(() => {
+        setCurrentOperation(null);
+      }, 3000);
+    }
+  }, [isConfirmed, currentOperation, refetchBalance]);
+
   // Auto-calculate Merkle proof and nullifier when epoch is selected
   useEffect(() => {
     if (!selectedEpochId || !address || !epochData || !userBalance || !chainId) {
@@ -328,6 +352,9 @@ export function ClaimYieldForm() {
     }
 
     try {
+      // Clear any previous operation state first
+      setCurrentOperation(null);
+      
       // Set operation type to 'claim'
       setCurrentOperation('claim');
       
@@ -451,19 +478,12 @@ export function ClaimYieldForm() {
         formattedProof.publicInputs
       );
 
-      // Reset form after successful claim
-      if (isConfirmed) {
-        setSelectedEpochId('');
-        setAutoNullifierSecret('');
-        setAutoMerkleSiblings('');
-        setAutoMerkleIndex('0');
-        setCalculationReady(false);
-        setStep('input');
-        await refetchBalance();
-      }
+      // Note: Form reset and success notification will happen after confirmation
+      // via the useEffect hook that watches isConfirmed state
     } catch (err) {
       console.error('Claim error:', err);
       setStep('input');
+      setCurrentOperation(null);
     }
   };
 
@@ -687,7 +707,7 @@ export function ClaimYieldForm() {
           </div>
         )}
 
-        {isConfirmed && currentOperation === 'claim' && (
+        {isConfirmed && currentOperation === 'claim' && step !== 'input' && (
           <div className="alert alert-success d-flex align-items-center gap-2" role="alert" style={{fontSize: '0.75rem'}}>
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />

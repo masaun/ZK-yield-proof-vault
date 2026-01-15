@@ -2,7 +2,7 @@ import { Noir } from '@noir-lang/noir_js';
 import { UltraHonkBackend } from '@aztec/bb.js';
 import type { CompiledCircuit } from '@noir-lang/types';
 import { buildPoseidon } from 'circomlibjs';
-import circuitData from '../../../circuits/zk-yield-proof-vault-0.0.2/zk-yield-proof-vault.json';
+import circuitData from '../../circuits/zk-yield-proof-vault-0.0.2/zk-yield-proof-vault.json';
 
 const circuit = circuitData as unknown as CompiledCircuit;
 

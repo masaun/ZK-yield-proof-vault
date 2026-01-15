@@ -9,7 +9,7 @@ async function testBarretenbergPoseidon() {
   try {
     const api = await BarretenbergSync.initSingleton();
     
-    const userAddress = BigInt('0xd3bffc0cd419344649dec61f08912a4af283e1a6');
+    const userAddress = BigInt('0xfdbffc0cd419344649dec61f08912a4af283e1a6'); // @dev - Here is an example address - So, please replace with actual EVM address used in the frontend
     const balance = BigInt('100000000');
     const blockNumber = BigInt('33467205');
     

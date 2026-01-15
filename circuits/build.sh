@@ -32,19 +32,19 @@ echo "Gate count:"
 bb gates -b target/zk_yield_proof_vault.json | jq '.functions[0].circuit_size'
 
 # Create version-specific directory
-mkdir -p "../client-and-server/circuits/zk-yield-proof-vault-$VERSION"
+mkdir -p "../client-and-server/circuits/client/zk-yield-proof-vault-$VERSION"
 #mkdir -p "../app/circuits/zk-yield-proof-vault-$VERSION"
 mkdir -p "target/vk"
 
 echo "Copying zk-yield-proof-vault.json to app/circuits/zk-yield-proof-vault-$VERSION..."
-cp target/zk_yield_proof_vault.json "../app/circuits/zk-yield-proof-vault-$VERSION/zk-yield-proof-vault.json"
+cp target/zk_yield_proof_vault.json "../client-and-server/circuits/client/zk-yield-proof-vault-$VERSION/zk-yield-proof-vault.json"
 
 echo "Generating a vkey (verification key)..."
 bb write_vk -b ./target/zk_yield_proof_vault.json -o ./target/vk --oracle_hash keccak   # bb.js v3.0.0-nightly.20251104
 #bb write_vk -b ./target/zk_yield_proof_vault.json -o ./target/vk --oracle_hash keccak  # bb.js v0.87.0 (Same with v3.0.0-nightly.20251104)
 
 echo "Generating vk.json to app/circuits/zk-yield-proof-vault-$VERSION..."
-node -e "const fs = require('fs'); fs.writeFileSync('../app/circuits/zk-yield-proof-vault-$VERSION/vk.json', JSON.stringify(Array.from(Uint8Array.from(fs.readFileSync('./target/vk/vk')))));"
+node -e "const fs = require('fs'); fs.writeFileSync('../client-and-server/circuits/client/zk-yield-proof-vault-$VERSION/vk.json', JSON.stringify(Array.from(Uint8Array.from(fs.readFileSync('./target/vk/vk')))));"
 
 echo "Generate a Solidity Verifier contract from the vkey..."
 bb write_solidity_verifier -k ./target/vk/vk -o ./target/Verifier.sol

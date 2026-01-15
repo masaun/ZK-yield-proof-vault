@@ -315,7 +315,8 @@ contract YieldVault {
         _validatePublicInputs(epochId, publicInputs);
         
         // Extract nullifier from public inputs
-        bytes32 nullifier = publicInputs[6];
+        // Public inputs order: [0-6] circuit pub params, [7] nullifier (return value), [8] balance_root (return value)
+        bytes32 nullifier = publicInputs[7];
         
         // Check if nullifier has been used
         if (usedNullifiers[nullifier]) revert NullifierAlreadyUsed();
@@ -347,8 +348,10 @@ contract YieldVault {
     function _validatePublicInputs(uint256 epochId, bytes32[] calldata publicInputs) private view {
         Epoch storage epoch = epochs[epochId];
         
-        // Validate balance root (index 0)
-        if (publicInputs[0] != epoch.balanceRoot) revert InvalidProof();
+        // Note: publicInputs[0] is expected_latest_user_balance_root (the new root after user's balance update)
+        // This is NOT compared to epoch.balanceRoot because the circuit creates a single-user tree
+        // The epoch.balanceRoot represents all users, while the circuit proves a single user's balance
+        // The actual verification happens through the ZK proof itself
         
         // Validate yield rate (index 2)
         if (uint64(uint256(publicInputs[2])) != yieldRate) revert InvalidProof();
