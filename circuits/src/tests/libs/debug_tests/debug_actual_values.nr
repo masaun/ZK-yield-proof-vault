@@ -4,7 +4,7 @@ use poseidon::poseidon2;
 #[test]
 fn test_with_actual_browser_values() {
     // Exact values from browser console
-    let user_address: Field = 0xd3BFFc0CD419344649deC61f08912a4Af283E1a6;
+    let user_address: Field = 0xfdbffc0cd419344649dec61f08912a4af283e1a6; // @dev - Here is an example address - So, please replace with actual EVM address used in the frontend
     let latest_user_balance: u64 = 100000000;
     let latest_block_number: u64 = 33467205;
     let epoch_start: u64 = 33466581;
@@ -19,7 +19,7 @@ fn test_with_actual_browser_values() {
     let client_leaf = poseidon2::Poseidon2::hash(inputs_for_leaf, inputs_for_leaf.len());
     
     println(f"Client calculated leaf: {client_leaf}");
-    println(f"Expected hex: 0xada5f2711176d084216de8492df94ba49d6188062c89556f6b8f74f588ab2d5");
+    println(f"Expected hex: 0xada5f2711176d084216de8492df94ba49d6188062c89556f6b8f74f588ab2d5");  
     
     // What the client thinks the root should be
     let expected_latest_user_balance_root = client_leaf; // Single entry tree

@@ -1,6 +1,6 @@
 'use client';
 
-import { useReadContract, useWriteContract, useWaitForTransactionReceipt, useAccount, useChainId, useBlockNumber } from 'wagmi';
+import { useReadContract, useWriteContract, useWaitForTransactionReceipt, useAccount, useChainId, useBlockNumber, usePublicClient } from 'wagmi';
 import { YieldVaultABI } from '@/contracts/abis/yield-vault/YieldVault.abi';
 import { getContractAddresses } from '@/contracts/contract-addresses/addresses';
 import { parseEther } from 'viem';
@@ -9,6 +9,7 @@ export function useYieldVault() {
   const chainId = useChainId();
   const { address } = useAccount();
   const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const publicClient = usePublicClient();
   
   const vaultAddress = getContractAddresses(chainId)?.vault;
 
@@ -136,14 +137,45 @@ export function useYieldVault() {
     publicInputs: `0x${string}`[]
   ) => {
     if (!vaultAddress) throw new Error('Vault address not found for this network');
+    if (!address) throw new Error('Wallet not connected');
+    if (!publicClient) throw new Error('Public client not available');
     
-    return writeContract({
-      address: vaultAddress,
-      abi: YieldVaultABI,
-      functionName: 'claimYield',
-      args: [epochId, proof, publicInputs],
-      gas: 500000n, // Higher gas limit for ZK proof verification
-    });
+    try {
+      // Estimate gas for the transaction
+      const estimatedGas = await publicClient.estimateContractGas({
+        address: vaultAddress,
+        abi: YieldVaultABI,
+        functionName: 'claimYield',
+        args: [epochId, proof, publicInputs],
+        account: address,
+      });
+
+      // Add 30% buffer to estimated gas for safety (ZK proofs can be variable)
+      const gasWithBuffer = (estimatedGas * 130n) / 100n;
+      
+      console.log('Gas estimation for claimYield:', {
+        estimated: estimatedGas.toString(),
+        withBuffer: gasWithBuffer.toString(),
+      });
+
+      return writeContract({
+        address: vaultAddress,
+        abi: YieldVaultABI,
+        functionName: 'claimYield',
+        args: [epochId, proof, publicInputs],
+        gas: gasWithBuffer,
+      });
+    } catch (estimateError) {
+      console.error('Gas estimation failed, using fallback:', estimateError);
+      // Fallback to a higher fixed gas limit if estimation fails
+      return writeContract({
+        address: vaultAddress,
+        abi: YieldVaultABI,
+        functionName: 'claimYield',
+        args: [epochId, proof, publicInputs],
+        gas: 2000000n, // Increased fallback gas limit for ZK proof verification
+      });
+    }
   };
 
   const snapshotEpoch = async (balanceRoot: `0x${string}`, totalYield: string) => {
