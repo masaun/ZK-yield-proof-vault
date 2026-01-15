@@ -1,7 +1,7 @@
 'use client';
 
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt, useAccount, useChainId } from 'wagmi';
-import { YieldVaultABI } from '@/contracts/abis/YieldVault.abi';
+import { YieldVaultABI } from '@/contracts/abis/yield-vault/YieldVault.abi.ts';
 import { getContractAddresses } from '@/contracts/contract-addresses/addresses';
 import { parseEther } from 'viem';
 
