@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useYieldVault, useEpochData, useHasClaimedEpoch, useEpochsPassedSinceDeposit, useUserDepositInfo, useAllDepositorsWithBalances, useSnapshotData } from '@/hooks/yield-vault/useYieldVault';
 import { useZkYieldProofProver } from '@/hooks/zk-circuits/useZkYieldProofProver';
 import { useAccount, useChainId } from 'wagmi';
-import { generateNullifier, generateUserBalanceLeaf } from '@/zk-circuits/zkYieldProofProver';
+import { generateNullifier, generateUserBalanceLeaf, calculateSingleLeafMerkleRoot, formatProofForContract } from '@/zk-circuits/zkYieldProofProver';
 import type { ProofInputs } from '@/zk-circuits/zkYieldProofProver';
 import { SimpleCard } from '@/components/ui/SimpleCard';
 import { buildMerkleTree, generateMerkleProof, type UserBalance } from '@/zk-circuits/merkleTree';
@@ -345,22 +345,36 @@ export function ClaimYieldForm() {
       
       // Calculate user balance leaf using SCALED balance
       const latestBlockNumber = BigInt(epochData[2]); // endBlock
-      const userBalanceLeaf = generateUserBalanceLeaf(
-        address,
+      
+      // Normalize address to lowercase for consistent hashing
+      const normalizedAddress = address.toLowerCase();
+      
+      console.log('Calculating user balance leaf with:');
+      console.log('  - address:', normalizedAddress);
+      console.log('  - scaledBalance:', scaledBalance.toString());
+      console.log('  - latestBlockNumber:', latestBlockNumber.toString());
+      
+      const userBalanceLeaf = await generateUserBalanceLeaf(
+        normalizedAddress,
         scaledBalance, // Use scaled balance
         latestBlockNumber
       );
       
-      // Get the balance root from epoch
-      const balanceRoot = epochData[5] as `0x${string}`;
-      const balanceRootBigInt = BigInt(balanceRoot);
+      console.log('  - Resulting leaf:', userBalanceLeaf.toString());
+      console.log('  - Leaf hex:', '0x' + userBalanceLeaf.toString(16));
       
-      // Calculate nullifier
-      const nullifier = generateNullifier(
-        address,
+      // Get the balance root from epoch - but we need to calculate what the new root will be
+      // Since update_merkle_tree creates a NEW empty tree and adds the leaf at index 0,
+      // For a single leaf with empty paths, the root equals the leaf itself
+      const expectedNewRoot = calculateSingleLeafMerkleRoot(userBalanceLeaf);
+      const lastRoot = userBalanceLeaf; // Using leaf as last root for now
+      
+      // Calculate nullifier using the expected new root
+      const nullifier = await generateNullifier(
+        normalizedAddress,
         latestBlockNumber,
         userBalanceLeaf,
-        balanceRootBigInt
+        expectedNewRoot
       );
       
       // Calculate user's yield - must fit in u64 range
@@ -384,13 +398,25 @@ export function ClaimYieldForm() {
         maxU64: '18446744073709551615',
         fitsInU64: userYield <= BigInt('18446744073709551615')
       });
+
+      console.log('Merkle tree values:', {
+        userBalanceLeaf: userBalanceLeaf.toString(),
+        userBalanceLeafHex: '0x' + userBalanceLeaf.toString(16),
+        lastRoot: lastRoot.toString(),
+        lastRootHex: '0x' + lastRoot.toString(16),
+        expectedNewRoot: expectedNewRoot.toString(),
+        expectedNewRootHex: '0x' + expectedNewRoot.toString(16),
+        nullifier: nullifier.toString(),
+        nullifierHex: '0x' + nullifier.toString(16),
+        areRootsEqual: expectedNewRoot === lastRoot
+      });
       
       const proofInputs: ProofInputs = {
-        user_address: address,
+        user_address: normalizedAddress,
         latest_user_balance: scaledBalance.toString(), // Use scaled balance to match yield calculation
         latest_user_yield: userYield.toString(),
-        expected_latest_user_balance_root: balanceRoot,
-        last_user_balance_root: balanceRoot, // Using same root (no Merkle update for now)
+        expected_latest_user_balance_root: '0x' + expectedNewRoot.toString(16),
+        last_user_balance_root: '0x' + lastRoot.toString(16), // Using leaf as last root
         epoch_start: epochData[1].toString(), // startBlock
         epoch_end: epochData[2].toString(),   // endBlock
         latest_block_number: epochData[2].toString(), // Using endBlock
@@ -401,16 +427,23 @@ export function ClaimYieldForm() {
       };
 
       console.log('Generating proof with inputs:', proofInputs);
+      console.log('Constraint checks:');
+      console.log('  - Yield formula: latest_user_yield == latest_user_balance * yield_rate * duration');
+      console.log('    ', userYield.toString(), '==', scaledBalance.toString(), '*', yieldRateBigInt.toString(), '*', epochDuration.toString());
+      console.log('    Expected:', (scaledBalance * yieldRateBigInt * epochDuration).toString());
+      console.log('  - Yield <= total:', userYield.toString(), '<=', userYield.toString());
+      console.log('  - KYC:', true);
 
-      await generateProof(proofInputs);
+      const proofOutput = await generateProof(proofInputs);
       
       // Step 2: Claim yield with proof
       setStep('claiming');
-      const formattedProof = getFormattedProof();
       
-      if (!formattedProof) {
-        throw new Error('Failed to format proof');
+      if (!proofOutput) {
+        throw new Error('Failed to generate proof');
       }
+
+      const formattedProof = formatProofForContract(proofOutput);
 
       await claimYield(
         BigInt(selectedEpochId),

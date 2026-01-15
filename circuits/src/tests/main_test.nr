@@ -41,6 +41,7 @@ fn test_main_valid_yield_proof() {
     // @dev - Calculate expected leaf hash
     let inputs = [user_address, latest_user_balance as Field, latest_block_number as Field];
     let latest_user_balance_leaf = poseidon2::Poseidon2::hash(inputs, inputs.len());
+    println(f"Leaf value: {latest_user_balance_leaf}");
     
     // @dev - Public inputs
     let last_user_balance_root: Field = 0x1234; // Simplified for test

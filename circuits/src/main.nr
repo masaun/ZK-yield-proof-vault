@@ -1,7 +1,7 @@
 mod tests;
 mod libs;
 
-use poseidon::poseidon2;         // @dev - Poseidon Hash
+use poseidon::poseidon::bn254;         // @dev - Poseidon Hash (compatible with circomlibjs)
 //use std::hash::pedersen_hash;  // @dev - Pedersen Hash function
 
 use libs::{
@@ -10,18 +10,9 @@ use libs::{
     }
 };
 
-// Private Inputs
-// - User balances
-// - Deposit timestamps
-// - KYC eligibility flags (or credential hashes)
-// - Merkle inclusion proofs
-
-// Public Inputs
-// - balanceRoot
-// - yieldRate or yield formula parameters
-// - epochStart, epochEnd
-// - totalYield
-
+/**
+ * @notice - ZK circuit for generating a Yield Proof
+ */
 fn main(
     user_address: Field,
     latest_user_balance: u64,                     // @dev - New user balance to be inserted into the Merkle tree
@@ -46,7 +37,7 @@ fn main(
 ) -> pub (Field, Field) {
     // @dev - Hash
     let inputs_for_leaf = [user_address, latest_user_balance as Field, latest_block_number as Field]; // @dev - [TODO]: Add a salt value for better security
-    let latest_user_balance_leaf = poseidon2::Poseidon2::hash(inputs_for_leaf, inputs_for_leaf.len());
+    let latest_user_balance_leaf = bn254::hash_3(inputs_for_leaf);
 
     // @dev - Update the Merkle tree with the user's balance and retrieve the new Merkle root of the user balances as the return value
     let latest_user_balance_root = update_merkle_tree(latest_user_balance_leaf, last_user_balance_root, []);
@@ -55,7 +46,13 @@ fn main(
     assert_eq(latest_user_balance_root, expected_latest_user_balance_root);
 
     // @dev - Constraint: Correct Yield Formula
-    assert_eq(latest_user_yield, latest_user_balance * yield_rate * (epoch_end - epoch_start));
+    // Convert to Field to avoid u64 overflow
+    let balance_field = latest_user_balance as Field;
+    let yield_rate_field = yield_rate as Field;
+    let duration_field = (epoch_end - epoch_start) as Field;
+    let expected_yield_field = balance_field * yield_rate_field * duration_field;
+    let actual_yield_field = latest_user_yield as Field;
+    assert_eq(actual_yield_field, expected_yield_field);
 
     // @dev - Constraint: Compliance Constraint (Optional)
     assert_eq(kyc_eligibility_flags, true);
@@ -65,7 +62,7 @@ fn main(
 
     // @dev - Calculate a nullifier in order for each deposit to prevent double-spending
     let inputs_for_nullifier = [user_address, latest_block_number as Field, latest_user_balance_leaf, latest_user_balance_root];
-    let nullifier = poseidon2::Poseidon2::hash(inputs_for_nullifier, inputs_for_nullifier.len());
+    let nullifier = bn254::hash_4(inputs_for_nullifier);
 
     // @dev - Constraint: Correct nullifier
     assert_eq(nullifier, expected_nullifier);
