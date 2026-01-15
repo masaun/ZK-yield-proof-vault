@@ -19,6 +19,30 @@ export function SnapshotEpochForm() {
   const { isConnected, address } = useAccount();
   const chainId = useChainId();
 
+  // Handle post-confirmation actions
+  useEffect(() => {
+    if (isConfirmed && depositorsData && currentEpochId !== undefined && chainId && balanceRoot) {
+      // Save snapshot data to localStorage for future claims
+      const [addresses, balances] = depositorsData as [readonly string[], readonly bigint[]];
+      saveEpochSnapshot({
+        epochId: currentEpochId.toString(),
+        addresses: Array.from(addresses),
+        balances: balances.map(b => b.toString()),
+        balanceRoot: balanceRoot,
+        timestamp: Date.now(),
+        chainId,
+      });
+      console.log(`Saved snapshot data for epoch ${currentEpochId}`);
+      
+      // Clear form after successful confirmation
+      setBalanceRoot('');
+      setTotalYield('');
+      
+      // Refetch epoch ID after confirmation
+      refetchEpochId();
+    }
+  }, [isConfirmed, depositorsData, currentEpochId, chainId, balanceRoot, refetchEpochId]);
+
   // Automatically calculate and populate balance root and total yield
   useEffect(() => {
     const calculateSnapshotData = async () => {
@@ -62,10 +86,10 @@ export function SnapshotEpochForm() {
       }
     };
 
-    if (isConnected && isOwner) {
+    if (isConnected) {
       calculateSnapshotData();
     }
-  }, [depositorsData, currentBalanceRoot, calculatedTotalYield, isConnected, isOwner]);
+  }, [depositorsData, currentBalanceRoot, calculatedTotalYield, isConnected]);
 
   const handleSnapshot = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,28 +123,8 @@ export function SnapshotEpochForm() {
       
       await snapshotEpoch(balanceRoot as `0x${string}`, totalYield);
       
-      // Save snapshot data to localStorage for future claims
-      if (depositorsData && currentEpochId !== undefined && chainId) {
-        const [addresses, balances] = depositorsData as [readonly string[], readonly bigint[]];
-        saveEpochSnapshot({
-          epochId: currentEpochId.toString(),
-          addresses: Array.from(addresses),
-          balances: balances.map(b => b.toString()),
-          balanceRoot: balanceRoot,
-          timestamp: Date.now(),
-          chainId,
-        });
-        console.log(`Saved snapshot data for epoch ${currentEpochId}`);
-      }
-      
-      // Clear form on success
-      setBalanceRoot('');
-      setTotalYield('');
-      
-      // Refetch epoch ID after confirmation
-      if (isConfirmed) {
-        await refetchEpochId();
-      }
+      // Note: Data saving and form clearing will happen after transaction confirmation
+      // See useEffect below that watches isConfirmed state
     } catch (err: any) {
       console.error('Snapshot error:', err);
       
@@ -156,17 +160,6 @@ export function SnapshotEpochForm() {
     );
   }
 
-  if (isOwner === false) {
-    return (
-      <div className="alert alert-danger d-flex align-items-center gap-2" role="alert" style={{fontSize: '0.75rem'}}>
-        <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
-          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-        </svg>
-        <span>Access denied. Only the contract owner can snapshot epochs. Connected address: {address}</span>
-      </div>
-    );
-  }
-
   return (
     <SimpleCard title="Snapshot Current Epoch">
       <form onSubmit={handleSnapshot} className="d-flex flex-column gap-3">
@@ -175,7 +168,7 @@ export function SnapshotEpochForm() {
           <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
           </svg>
-          <span>Balance root and total yield are automatically calculated from on-chain data</span>
+          <span>Balance root and total yield are automatically calculated from on-chain data. Anyone can snapshot epochs!</span>
         </div>
 
         {/* Balance Root Input */}

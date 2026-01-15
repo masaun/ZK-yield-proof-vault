@@ -1,29 +1,35 @@
 import { Noir } from '@noir-lang/noir_js';
 import { UltraHonkBackend } from '@aztec/bb.js';
 import type { CompiledCircuit } from '@noir-lang/types';
-import { poseidon1 } from 'poseidon-lite';
+import { poseidon3, poseidon4 } from 'poseidon-lite';
 import circuitData from '../../circuits/zk-yield-proof-vault-0.0.1/zk-yield-proof-vault.json';
 
 const circuit = circuitData as unknown as CompiledCircuit;
 
 export interface ProofInputs {
   // User data
-  user_balance: string;
-  user_balance_merkle_path: string[];
-  user_balance_merkle_index: string;
+  user_address: string;
+  latest_user_balance: string;
+  latest_user_yield: string;
+  
+  // Merkle tree data
+  expected_latest_user_balance_root: string;
+  last_user_balance_root: string;
   
   // Epoch data
   epoch_start: string;
   epoch_end: string;
-  
-  // Global state
   latest_block_number: string;
+  
+  // Yield data
   yield_rate: string;
-  expected_latest_user_balance_root: string;
   latest_total_yield: string;
   
-  // Privacy
-  nullifier_secret: string;
+  // KYC
+  kyc_eligibility_flags: boolean;
+  
+  // Privacy - nullifier
+  expected_nullifier: string;
 }
 
 export interface ProofOutput {
@@ -32,14 +38,41 @@ export interface ProofOutput {
 }
 
 /**
- * Generate a nullifier from a secret using Poseidon hash
- * This ensures the nullifier is ZK-friendly and deterministic
+ * Generate a nullifier to prevent double-claiming
+ * Matches the circuit's nullifier calculation:
+ * poseidon2::Poseidon2::hash([user_address, latest_block_number, latest_user_balance_leaf, latest_user_balance_root])
  */
-export function generateNullifier(secret: string): bigint {
-  // Convert secret string to bigint
-  const secretBigInt = BigInt('0x' + Buffer.from(secret).toString('hex'));
-  // Hash with Poseidon to get nullifier
-  return poseidon1([secretBigInt]);
+export function generateNullifier(
+  userAddress: string,
+  latestBlockNumber: bigint,
+  latestUserBalanceLeaf: bigint,
+  latestUserBalanceRoot: bigint
+): bigint {
+  // Calculate nullifier using Poseidon hash with 4 inputs
+  return poseidon4([
+    BigInt(userAddress),
+    latestBlockNumber,
+    latestUserBalanceLeaf,
+    latestUserBalanceRoot
+  ]);
+}
+
+/**
+ * Generate user balance leaf hash
+ * Matches the circuit's leaf calculation:
+ * poseidon2::Poseidon2::hash([user_address, latest_user_balance, latest_block_number])
+ */
+export function generateUserBalanceLeaf(
+  userAddress: string,
+  latestUserBalance: bigint,
+  latestBlockNumber: bigint
+): bigint {
+  // Using poseidon3 since we have 3 inputs
+  return poseidon3([
+    BigInt(userAddress),
+    latestUserBalance,
+    latestBlockNumber
+  ]);
 }
 
 /**
@@ -53,19 +86,23 @@ export async function generateYieldProof(inputs: ProofInputs): Promise<ProofOutp
     // Initialize the backend with the circuit
     const backend = new UltraHonkBackend(circuit.bytecode);
     
-    // Format inputs for the circuit
+    // Format inputs for the circuit - must match the circuit's main function signature
     const formattedInputs = {
-      user_balance: inputs.user_balance,
-      user_balance_merkle_path: inputs.user_balance_merkle_path,
-      user_balance_merkle_index: inputs.user_balance_merkle_index,
+      user_address: inputs.user_address,
+      latest_user_balance: inputs.latest_user_balance,
+      expected_latest_user_balance_root: inputs.expected_latest_user_balance_root,
+      last_user_balance_root: inputs.last_user_balance_root,
+      latest_block_number: inputs.latest_block_number,
+      kyc_eligibility_flags: inputs.kyc_eligibility_flags,
+      latest_user_yield: inputs.latest_user_yield,
+      yield_rate: inputs.yield_rate,
       epoch_start: inputs.epoch_start,
       epoch_end: inputs.epoch_end,
-      latest_block_number: inputs.latest_block_number,
-      yield_rate: inputs.yield_rate,
-      expected_latest_user_balance_root: inputs.expected_latest_user_balance_root,
       latest_total_yield: inputs.latest_total_yield,
-      nullifier_secret: inputs.nullifier_secret,
+      expected_nullifier: inputs.expected_nullifier,
     };
+
+    console.log('Circuit inputs:', formattedInputs);
 
     // Generate the witness
     console.log('Generating witness...');
