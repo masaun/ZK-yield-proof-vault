@@ -209,11 +209,11 @@ contract YieldVault {
     // ============ Epoch Management ============
     
     /**
-     * @notice Take a snapshot of the current epoch and start a new one (owner only)
+     * @notice Take a snapshot of the current epoch and start a new one (anyone can call)
      * @param _balanceRoot The Merkle root of all user balances
      * @param _totalYield The total yield for this epoch
      */
-    function snapshotEpoch(bytes32 _balanceRoot, uint64 _totalYield) external onlyOwner {
+    function snapshotEpoch(bytes32 _balanceRoot, uint64 _totalYield) external {
         _snapshotEpoch(_balanceRoot, _totalYield);
     }
     

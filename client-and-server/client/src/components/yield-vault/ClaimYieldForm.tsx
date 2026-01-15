@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useYieldVault, useEpochData, useHasClaimedEpoch, useEpochsPassedSinceDeposit, useUserDepositInfo, useAllDepositorsWithBalances } from '@/hooks/yield-vault/useYieldVault';
+import { useYieldVault, useEpochData, useHasClaimedEpoch, useEpochsPassedSinceDeposit, useUserDepositInfo, useAllDepositorsWithBalances, useSnapshotData } from '@/hooks/yield-vault/useYieldVault';
 import { useZkYieldProofProver } from '@/hooks/zk-circuits/useZkYieldProofProver';
 import { useAccount, useChainId } from 'wagmi';
 import { generateNullifier } from '@/zk-circuits/zkYieldProofProver';
@@ -9,7 +9,7 @@ import type { ProofInputs } from '@/zk-circuits/zkYieldProofProver';
 import { SimpleCard } from '@/components/ui/SimpleCard';
 import { buildMerkleTree, generateMerkleProof, type UserBalance } from '@/zk-circuits/merkleTree';
 import { poseidon1 } from 'poseidon-lite';
-import { getEpochSnapshot } from '@/utils/snapshotStorage';
+import { getEpochSnapshot, saveEpochSnapshot } from '@/utils/snapshotStorage';
 
 export function ClaimYieldForm() {
   const [step, setStep] = useState<'input' | 'generating' | 'claiming'>('input');
@@ -21,23 +21,31 @@ export function ClaimYieldForm() {
   const [calculationReady, setCalculationReady] = useState(false);
   const [selectedEpochId, setSelectedEpochId] = useState<string>('');
   
+  // Snapshot state
+  const [isSnapshotting, setIsSnapshotting] = useState(false);
+  const [snapshotError, setSnapshotError] = useState<string>('');
+  const [snapshotSuccess, setSnapshotSuccess] = useState(false);
+  
   const { isConnected, address } = useAccount();
   const chainId = useChainId();
   const { 
-    claimYield, 
+    claimYield,
+    snapshotEpoch,
     isPending, 
     isConfirming, 
     isConfirmed, 
     error: claimError,
     userBalance,
     refetchBalance,
-    currentEpochId 
+    currentEpochId,
+    refetchEpochId,
   } = useYieldVault();
   
   // Get epochs passed from contract
   const { epochsPassed: contractEpochsPassed } = useEpochsPassedSinceDeposit();
   const { depositInfo } = useUserDepositInfo();
   const { depositorsData } = useAllDepositorsWithBalances();
+  const { currentBalanceRoot, totalYield: calculatedTotalYield } = useSnapshotData();
   
   const { 
     generateProof,
@@ -152,6 +160,90 @@ export function ClaimYieldForm() {
     }
   }, [selectedEpochId, address, epochData, userBalance, depositorsData, chainId]);
 
+  const handleSnapshotEpoch = async () => {
+    if (!depositorsData || !chainId || currentEpochId === undefined) {
+      setSnapshotError('Missing required data to snapshot epoch');
+      return;
+    }
+
+    setIsSnapshotting(true);
+    setSnapshotError('');
+    setSnapshotSuccess(false);
+
+    try {
+      // Calculate balance root from depositors data
+      const [addresses, balances] = depositorsData as [readonly `0x${string}`[], readonly bigint[]];
+      
+      let balanceRoot: string;
+      
+      if (addresses.length > 0 && balances.length > 0) {
+        // Build user balances array
+        const userBalances: UserBalance[] = addresses.map((addr, i) => ({
+          address: addr,
+          balance: balances[i],
+        }));
+
+        // Build Merkle tree
+        const { root } = buildMerkleTree(userBalances);
+        
+        // Convert root to hex string
+        balanceRoot = '0x' + root.toString(16).padStart(64, '0');
+      } else {
+        // No depositors, use zero hash
+        balanceRoot = '0x0000000000000000000000000000000000000000000000000000000000000000';
+      }
+
+      // Use calculated total yield
+      const totalYieldValue = calculatedTotalYield?.toString() || '0';
+
+      console.log('Snapshotting epoch with:', {
+        balanceRoot,
+        totalYield: totalYieldValue,
+        currentEpochId: currentEpochId.toString(),
+      });
+
+      // Call snapshot function
+      await snapshotEpoch(balanceRoot as `0x${string}`, totalYieldValue);
+
+      // Save snapshot data to localStorage for future claims
+      saveEpochSnapshot({
+        epochId: currentEpochId.toString(),
+        addresses: Array.from(addresses),
+        balances: balances.map(b => b.toString()),
+        balanceRoot: balanceRoot,
+        timestamp: Date.now(),
+        chainId,
+      });
+
+      setSnapshotSuccess(true);
+      
+      // Refetch epoch ID after snapshot
+      setTimeout(async () => {
+        await refetchEpochId();
+        setSnapshotSuccess(false);
+      }, 3000);
+
+    } catch (err: any) {
+      console.error('Snapshot error:', err);
+      
+      let errorMessage = 'Snapshot failed. Please try again.';
+      
+      if (err?.message) {
+        if (err.message.includes('user rejected') || err.message.includes('User rejected')) {
+          errorMessage = 'Transaction was rejected.';
+        } else if (err.message.includes('EpochAlreadyEnded')) {
+          errorMessage = 'This epoch has already been snapshotted.';
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
+      setSnapshotError(errorMessage);
+    } finally {
+      setIsSnapshotting(false);
+    }
+  };
+
   const handleGenerateAndClaim = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -256,7 +348,7 @@ export function ClaimYieldForm() {
             </svg>
             <div>
               You deposited in Epoch #0, which is still active. You can claim yield once this epoch ends 
-              and is snapshotted. The contract owner needs to call <code className="bg-white px-1 rounded">snapshotEpoch()</code> to advance epochs.
+              and is snapshotted. Anyone can call <code className="bg-white px-1 rounded">snapshotEpoch()</code> to advance epochs.
             </div>
           </div>
         )}
@@ -356,6 +448,46 @@ export function ClaimYieldForm() {
             </p>
           </div>
         )}
+
+        {/* Snapshot Epoch Section */}
+        <div className="card border-warning bg-warning bg-opacity-10 shadow-sm" style={{padding: '0.75rem'}}>
+          <div className="d-flex align-items-center gap-2 mb-2">
+            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <p className="mb-0 fw-semibold text-warning" style={{fontSize: '0.75rem'}}>Snapshot Current Epoch</p>
+          </div>
+          <p className="text-warning text-2xs mb-2">
+            Before claiming yield, you may need to snapshot the current epoch. Anyone can snapshot epochs!
+          </p>
+          <button 
+            type="button"
+            onClick={handleSnapshotEpoch}
+            disabled={isSnapshotting || !depositorsData || currentEpochId === undefined}
+            className="btn btn-warning btn-sm w-100"
+          >
+            {isSnapshotting ? 'Snapshotting...' : 'Snapshot Current Epoch'}
+          </button>
+          
+          {snapshotSuccess && (
+            <div className="alert alert-success d-flex align-items-center gap-2 mt-2 mb-0" role="alert" style={{fontSize: '0.7rem', padding: '0.5rem'}}>
+              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              <div>Epoch snapshotted successfully!</div>
+            </div>
+          )}
+          
+          {snapshotError && (
+            <div className="alert alert-danger d-flex align-items-center gap-2 mt-2 mb-0" role="alert" style={{fontSize: '0.7rem', padding: '0.5rem'}}>
+              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              <div>{snapshotError}</div>
+            </div>
+          )}
+        </div>
 
         {/* Submit Button */}
         <button 
