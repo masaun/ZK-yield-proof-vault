@@ -346,13 +346,16 @@ export function ClaimYieldForm() {
       // Calculate user balance leaf using SCALED balance
       const latestBlockNumber = BigInt(epochData[2]); // endBlock
       
+      // Normalize address to lowercase for consistent hashing
+      const normalizedAddress = address.toLowerCase();
+      
       console.log('Calculating user balance leaf with:');
-      console.log('  - address:', address);
+      console.log('  - address:', normalizedAddress);
       console.log('  - scaledBalance:', scaledBalance.toString());
       console.log('  - latestBlockNumber:', latestBlockNumber.toString());
       
       const userBalanceLeaf = await generateUserBalanceLeaf(
-        address,
+        normalizedAddress,
         scaledBalance, // Use scaled balance
         latestBlockNumber
       );
@@ -368,7 +371,7 @@ export function ClaimYieldForm() {
       
       // Calculate nullifier using the expected new root
       const nullifier = await generateNullifier(
-        address,
+        normalizedAddress,
         latestBlockNumber,
         userBalanceLeaf,
         expectedNewRoot
@@ -409,7 +412,7 @@ export function ClaimYieldForm() {
       });
       
       const proofInputs: ProofInputs = {
-        user_address: address,
+        user_address: normalizedAddress,
         latest_user_balance: scaledBalance.toString(), // Use scaled balance to match yield calculation
         latest_user_yield: userYield.toString(),
         expected_latest_user_balance_root: '0x' + expectedNewRoot.toString(16),
