@@ -19,6 +19,30 @@ export function SnapshotEpochForm() {
   const { isConnected, address } = useAccount();
   const chainId = useChainId();
 
+  // Handle post-confirmation actions
+  useEffect(() => {
+    if (isConfirmed && depositorsData && currentEpochId !== undefined && chainId && balanceRoot) {
+      // Save snapshot data to localStorage for future claims
+      const [addresses, balances] = depositorsData as [readonly string[], readonly bigint[]];
+      saveEpochSnapshot({
+        epochId: currentEpochId.toString(),
+        addresses: Array.from(addresses),
+        balances: balances.map(b => b.toString()),
+        balanceRoot: balanceRoot,
+        timestamp: Date.now(),
+        chainId,
+      });
+      console.log(`Saved snapshot data for epoch ${currentEpochId}`);
+      
+      // Clear form after successful confirmation
+      setBalanceRoot('');
+      setTotalYield('');
+      
+      // Refetch epoch ID after confirmation
+      refetchEpochId();
+    }
+  }, [isConfirmed, depositorsData, currentEpochId, chainId, balanceRoot, refetchEpochId]);
+
   // Automatically calculate and populate balance root and total yield
   useEffect(() => {
     const calculateSnapshotData = async () => {
@@ -99,28 +123,8 @@ export function SnapshotEpochForm() {
       
       await snapshotEpoch(balanceRoot as `0x${string}`, totalYield);
       
-      // Save snapshot data to localStorage for future claims
-      if (depositorsData && currentEpochId !== undefined && chainId) {
-        const [addresses, balances] = depositorsData as [readonly string[], readonly bigint[]];
-        saveEpochSnapshot({
-          epochId: currentEpochId.toString(),
-          addresses: Array.from(addresses),
-          balances: balances.map(b => b.toString()),
-          balanceRoot: balanceRoot,
-          timestamp: Date.now(),
-          chainId,
-        });
-        console.log(`Saved snapshot data for epoch ${currentEpochId}`);
-      }
-      
-      // Clear form on success
-      setBalanceRoot('');
-      setTotalYield('');
-      
-      // Refetch epoch ID after confirmation
-      if (isConfirmed) {
-        await refetchEpochId();
-      }
+      // Note: Data saving and form clearing will happen after transaction confirmation
+      // See useEffect below that watches isConfirmed state
     } catch (err: any) {
       console.error('Snapshot error:', err);
       

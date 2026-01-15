@@ -202,26 +202,33 @@ export function ClaimYieldForm() {
         currentEpochId: currentEpochId.toString(),
       });
 
-      // Call snapshot function
+      // Call snapshot function - this initiates the transaction
       await snapshotEpoch(balanceRoot as `0x${string}`, totalYieldValue);
 
-      // Save snapshot data to localStorage for future claims
-      saveEpochSnapshot({
-        epochId: currentEpochId.toString(),
-        addresses: Array.from(addresses),
-        balances: balances.map(b => b.toString()),
-        balanceRoot: balanceRoot,
-        timestamp: Date.now(),
-        chainId,
-      });
-
-      setSnapshotSuccess(true);
+      // Note: The success state and data saving should happen after confirmation
+      // For now, we'll wait for the transaction to be mined
+      // The isConfirming state from useYieldVault will handle the pending state
       
-      // Refetch epoch ID after snapshot
-      setTimeout(async () => {
-        await refetchEpochId();
-        setSnapshotSuccess(false);
-      }, 3000);
+      // Save snapshot data after transaction is sent (will be confirmed via wagmi hooks)
+      // This allows users to see pending state before confirmation
+      setTimeout(() => {
+        saveEpochSnapshot({
+          epochId: currentEpochId.toString(),
+          addresses: Array.from(addresses),
+          balances: balances.map(b => b.toString()),
+          balanceRoot: balanceRoot,
+          timestamp: Date.now(),
+          chainId,
+        });
+        
+        setSnapshotSuccess(true);
+        
+        // Refetch epoch ID and hide success message after delay
+        setTimeout(async () => {
+          await refetchEpochId();
+          setSnapshotSuccess(false);
+        }, 3000);
+      }, 2000); // Wait 2 seconds for transaction to start confirming
 
     } catch (err: any) {
       console.error('Snapshot error:', err);
