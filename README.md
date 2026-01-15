@@ -31,6 +31,8 @@ The system allows users to deposit funds into a yield vault, and periodically ge
 
 ## Architecture
 
+### System Flow Diagram
+
 ```
 Users
   │
@@ -148,9 +150,9 @@ Claim Yield (if proof is valid)
 
 | Contract Name | Address | Network | Explorer |
 |--------------|---------|---------|----------|
-| HonkVerifier | `0xf1809b1b026bd53831ab8f225eef4873c363b608` | Mantle Sepolia | [View on Explorer](https://sepolia.mantlescan.xyz/address/0xf1809b1b026bd53831ab8f225eef4873c363b608) |
-| YieldProofVerifier | `0x7674964d4d6e5c8d6e36b4cf9dfea5770683d344` | Mantle Sepolia | [View on Explorer](https://sepolia.mantlescan.xyz/address/0x7674964d4d6e5c8d6e36b4cf9dfea5770683d344) |
-| YieldVault | `0xceb3cdf61f2a0f0311ab4dee457dd1dcf9861020` | Mantle Sepolia | [View on Explorer](https://sepolia.mantlescan.xyz/address/0xceb3cdf61f2a0f0311ab4dee457dd1dcf9861020) |
+| HonkVerifier | `0x786b31a1e67a9745f848dffb6c54a1d8accb8f1c` | Mantle Sepolia | [View on Explorer](https://sepolia.mantlescan.xyz/address/0x786b31a1e67a9745f848dffb6c54a1d8accb8f1c) |
+| YieldProofVerifier | `0x1aa877bfb71e7ec24224415a30e1e0345dc1d4c0` | Mantle Sepolia | [View on Explorer](https://sepolia.mantlescan.xyz/address/0x1aa877bfb71e7ec24224415a30e1e0345dc1d4c0) |
+| YieldVault | `0x44b3ae18a72a44b17cd762c48f5206ad4f4a17c9` | Mantle Sepolia | [View on Explorer](https://sepolia.mantlescan.xyz/address/0x44b3ae18a72a44b17cd762c48f5206ad4f4a17c9) |
 
 <br>
 
