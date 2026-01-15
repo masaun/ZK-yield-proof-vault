@@ -8,7 +8,7 @@ import { generateNullifier } from '@/zk-circuits/zkYieldProofProver';
 import type { ProofInputs } from '@/zk-circuits/zkYieldProofProver';
 import { SimpleCard } from '@/components/ui/SimpleCard';
 import { buildMerkleTree, generateMerkleProof, type UserBalance } from '@/zk-circuits/merkleTree';
-import { poseidon1 } from 'poseidon-lite';
+import { poseidon2 } from 'poseidon-lite';
 import { getEpochSnapshot, saveEpochSnapshot } from '@/utils/snapshotStorage';
 
 export function ClaimYieldForm() {
@@ -134,7 +134,7 @@ export function ClaimYieldForm() {
 
     try {
       // 1. Generate nullifier secret from user address and epoch
-      const secretInput = poseidon1([BigInt(address), BigInt(selectedEpochId)]);
+      const secretInput = poseidon2([BigInt(address), BigInt(selectedEpochId)]);
       setAutoNullifierSecret(secretInput.toString());
 
       // 2. Try to get historical snapshot data for this epoch
