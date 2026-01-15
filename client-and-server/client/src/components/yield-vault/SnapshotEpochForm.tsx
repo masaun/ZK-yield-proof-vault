@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useYieldVault, useSnapshotData, useAllDepositorsWithBalances } from '@/hooks/yield-vault/useYieldVault';
-import { useAccount } from 'wagmi';
+import { useAccount, useChainId } from 'wagmi';
 import { SimpleCard } from '@/components/ui/SimpleCard';
 import { buildMerkleTree, type UserBalance } from '@/zk-circuits/merkleTree';
+import { saveEpochSnapshot } from '@/utils/snapshotStorage';
 
 export function SnapshotEpochForm() {
   const [balanceRoot, setBalanceRoot] = useState('');
@@ -12,10 +13,11 @@ export function SnapshotEpochForm() {
   const [snapshotError, setSnapshotError] = useState<string>('');
   const [isCalculating, setIsCalculating] = useState(false);
   
-  const { snapshotEpoch, isPending, isConfirming, isConfirmed, error, isOwner, refetchEpochId } = useYieldVault();
+  const { snapshotEpoch, isPending, isConfirming, isConfirmed, error, isOwner, refetchEpochId, currentEpochId } = useYieldVault();
   const { currentBalanceRoot, totalYield: calculatedTotalYield } = useSnapshotData();
   const { depositorsData } = useAllDepositorsWithBalances();
   const { isConnected, address } = useAccount();
+  const chainId = useChainId();
 
   // Automatically calculate and populate balance root and total yield
   useEffect(() => {
@@ -96,6 +98,20 @@ export function SnapshotEpochForm() {
       });
       
       await snapshotEpoch(balanceRoot as `0x${string}`, totalYield);
+      
+      // Save snapshot data to localStorage for future claims
+      if (depositorsData && currentEpochId !== undefined && chainId) {
+        const [addresses, balances] = depositorsData as [readonly string[], readonly bigint[]];
+        saveEpochSnapshot({
+          epochId: currentEpochId.toString(),
+          addresses: Array.from(addresses),
+          balances: balances.map(b => b.toString()),
+          balanceRoot: balanceRoot,
+          timestamp: Date.now(),
+          chainId,
+        });
+        console.log(`Saved snapshot data for epoch ${currentEpochId}`);
+      }
       
       // Clear form on success
       setBalanceRoot('');
