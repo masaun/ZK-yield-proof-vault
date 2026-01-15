@@ -84,14 +84,29 @@ export function useYieldVault() {
 
   const withdraw = async (amount: string) => {
     if (!vaultAddress) throw new Error('Vault address not found for this network');
+    if (!address) throw new Error('Wallet not connected');
     
-    return writeContract({
-      address: vaultAddress,
-      abi: YieldVaultABI,
-      functionName: 'withdraw',
-      args: [parseEther(amount)],
-      gas: 200000n, // Explicit gas limit to prevent "Gas limit too low" error
-    });
+    try {
+      const amountInWei = parseEther(amount);
+      console.log('Preparing withdrawal:', {
+        vaultAddress,
+        amount,
+        amountInWei: amountInWei.toString(),
+        from: address,
+      });
+      
+      // Let the wallet handle gas estimation automatically
+      // Manual gas estimation on Mantle can sometimes cause issues
+      return writeContract({
+        address: vaultAddress,
+        abi: YieldVaultABI,
+        functionName: 'withdraw',
+        args: [amountInWei],
+      });
+    } catch (err) {
+      console.error('Withdraw error:', err);
+      throw err;
+    }
   };
 
   const claimYield = async(

@@ -50,6 +50,9 @@ export function ClaimYieldForm() {
       // Select the previous epoch (current epoch - 1) as it's likely completed
       const latestClaimableEpoch = (currentEpochId - 1n).toString();
       setSelectedEpochId(latestClaimableEpoch);
+    } else if (currentEpochId === 0n) {
+      // Still in first epoch, no claimable epochs yet
+      setSelectedEpochId('');
     }
   }, [currentEpochId]);
 
@@ -209,6 +212,19 @@ export function ClaimYieldForm() {
       )}
 
       <form onSubmit={handleGenerateAndClaim} className="d-flex flex-column gap-3">
+        {/* No claimable epochs warning */}
+        {currentEpochId === 0n && userBalance && userBalance > 0n && (
+          <div className="alert alert-warning d-flex align-items-center gap-2 mb-3" role="alert" style={{fontSize: '0.75rem'}}>
+            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div>
+              You deposited in Epoch #0, which is still active. You can claim yield once this epoch ends 
+              and is snapshotted. The contract owner needs to call <code className="bg-white px-1 rounded">snapshotEpoch()</code> to advance epochs.
+            </div>
+          </div>
+        )}
+
         {/* Epochs Passed Info */}
         {userBalance && userBalance > 0n && (
           <div className="card border-primary bg-primary bg-opacity-10 shadow-sm" style={{padding: '0.75rem'}}>
