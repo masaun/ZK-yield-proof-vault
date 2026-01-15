@@ -13,9 +13,11 @@ docs/
 
 # Dotenv file
 .env
+.env.bak
 
 # Foundry
 foundry.lock
+deployment.log
 
 # Others
 DS_Store

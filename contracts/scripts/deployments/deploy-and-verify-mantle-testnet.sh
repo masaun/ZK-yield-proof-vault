@@ -16,7 +16,7 @@ echo "- Total: ~0.7 MNT"
 echo ""
 
 # Load environment variables
-source .env
+source ../../.env
 
 # Check deployer balance
 DEPLOYER_ADDRESS=$(cast wallet address --private-key $PRIVATE_KEY)
@@ -31,13 +31,16 @@ echo "Estimated total cost: ~0.7 MNT"
 echo "Recommended balance: > $MIN_BALANCE MNT"
 echo ""
 
+# Change to contracts directory to run forge commands
+cd ../..
+
 # Deploy YieldProofSystem contracts
 echo "======================================"
 echo "1. Deploying YieldProofSystem Contracts"
 echo "======================================"
 echo ""
 
-forge script script/deployments/circuits/DeployYieldProofSystem.s.sol:DeployYieldProofSystem \
+forge script scripts/deployments/circuits/DeployYieldProofSystem.s.sol:DeployYieldProofSystem \
   --rpc-url $MANTLE_TESTNET_RPC_URL \
   --broadcast \
   --legacy \
@@ -78,7 +81,7 @@ echo "2. Deploying Rarimo ZK KYC Contracts"
 echo "======================================"
 echo ""
 
-forge script script/deployments/zk-kyc/rarimo/DeployZkKycWithRarimo.s.sol:DeployZkKycWithRarimo \
+forge script scripts/deployments/zk-kyc/rarimo/DeployZkKycWithRarimo.s.sol:DeployZkKycWithRarimo \
   --rpc-url $MANTLE_TESTNET_RPC_URL \
   --broadcast \
   --legacy \

@@ -37,7 +37,7 @@ echo "1. Deploying YieldProofSystem Contracts"
 echo "======================================"
 echo ""
 
-forge script script/deployments/circuits/DeployYieldProofSystem.s.sol:DeployYieldProofSystem \
+forge script scripts/deployments/circuits/DeployYieldProofSystem.s.sol:DeployYieldProofSystem \
   --rpc-url $MANTLE_MAINNET_RPC_URL \
   --broadcast \
   --legacy \
