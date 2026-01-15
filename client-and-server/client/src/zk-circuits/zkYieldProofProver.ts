@@ -1,10 +1,19 @@
 import { Noir } from '@noir-lang/noir_js';
 import { UltraHonkBackend } from '@aztec/bb.js';
 import type { CompiledCircuit } from '@noir-lang/types';
-import { poseidon3, poseidon4 } from 'poseidon-lite';
+import { buildPoseidon } from 'circomlibjs';
 import circuitData from '../../../circuits/zk-yield-proof-vault-0.0.2/zk-yield-proof-vault.json';
 
 const circuit = circuitData as unknown as CompiledCircuit;
+
+// Initialize Poseidon hash
+let poseidonHash: any = null;
+async function getPoseidon() {
+  if (!poseidonHash) {
+    poseidonHash = await buildPoseidon();
+  }
+  return poseidonHash;
+}
 
 export interface ProofInputs {
   // User data
@@ -42,19 +51,20 @@ export interface ProofOutput {
  * Matches the circuit's nullifier calculation:
  * poseidon2::Poseidon2::hash([user_address, latest_block_number, latest_user_balance_leaf, latest_user_balance_root])
  */
-export function generateNullifier(
+export async function generateNullifier(
   userAddress: string,
   latestBlockNumber: bigint,
   latestUserBalanceLeaf: bigint,
   latestUserBalanceRoot: bigint
-): bigint {
-  // Calculate nullifier using Poseidon hash with 4 inputs
-  return poseidon4([
+): Promise<bigint> {
+  const poseidon = await getPoseidon();
+  const hash = poseidon([
     BigInt(userAddress),
     latestBlockNumber,
     latestUserBalanceLeaf,
     latestUserBalanceRoot
   ]);
+  return poseidon.F.toObject(hash);
 }
 
 /**
@@ -62,17 +72,18 @@ export function generateNullifier(
  * Matches the circuit's leaf calculation:
  * poseidon2::Poseidon2::hash([user_address, latest_user_balance, latest_block_number])
  */
-export function generateUserBalanceLeaf(
+export async function generateUserBalanceLeaf(
   userAddress: string,
   latestUserBalance: bigint,
   latestBlockNumber: bigint
-): bigint {
-  // Using poseidon3 since we have 3 inputs
-  return poseidon3([
+): Promise<bigint> {
+  const poseidon = await getPoseidon();
+  const hash = poseidon([
     BigInt(userAddress),
     latestUserBalance,
     latestBlockNumber
   ]);
+  return poseidon.F.toObject(hash);
 }
 
 /**

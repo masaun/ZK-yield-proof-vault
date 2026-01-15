@@ -351,7 +351,7 @@ export function ClaimYieldForm() {
       console.log('  - scaledBalance:', scaledBalance.toString());
       console.log('  - latestBlockNumber:', latestBlockNumber.toString());
       
-      const userBalanceLeaf = generateUserBalanceLeaf(
+      const userBalanceLeaf = await generateUserBalanceLeaf(
         address,
         scaledBalance, // Use scaled balance
         latestBlockNumber
@@ -367,7 +367,7 @@ export function ClaimYieldForm() {
       const lastRoot = userBalanceLeaf; // Using leaf as last root for now
       
       // Calculate nullifier using the expected new root
-      const nullifier = generateNullifier(
+      const nullifier = await generateNullifier(
         address,
         latestBlockNumber,
         userBalanceLeaf,

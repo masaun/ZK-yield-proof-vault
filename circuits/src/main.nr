@@ -10,18 +10,9 @@ use libs::{
     }
 };
 
-// Private Inputs
-// - User balances
-// - Deposit timestamps
-// - KYC eligibility flags (or credential hashes)
-// - Merkle inclusion proofs
-
-// Public Inputs
-// - balanceRoot
-// - yieldRate or yield formula parameters
-// - epochStart, epochEnd
-// - totalYield
-
+/**
+ * @notice - ZK circuit for generating a Yield Proof
+ */
 fn main(
     user_address: Field,
     latest_user_balance: u64,                     // @dev - New user balance to be inserted into the Merkle tree
