@@ -24,10 +24,19 @@ This guide provides step-by-step instructions for deploying all contracts to Man
 
 Run the automated deployment script:
 
+- For the Mantle Mainnet
 ```bash
 cd contracts
-sh ./script/deployments/deploy-and-verify-mainnet.sh
+sh ./script/deployments/deploy-and-verify-mantle-mainnet.sh
 ```
+
+- For the Mantle Sepolia Testnet
+```bash
+cd contracts
+sh ./script/deployments/deploy-and-verify-mantle-testnet.sh
+```
+
+<br>
 
 This script will:
 1. Deploy all YieldProofSystem contracts (HonkVerifier, YieldProofVerifier, YieldVault)

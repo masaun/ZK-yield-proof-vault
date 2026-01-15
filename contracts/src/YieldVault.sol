@@ -26,6 +26,7 @@ contract YieldVault {
     // ============ Events ============
     
     event Deposited(address indexed user, uint256 amount, uint256 timestamp, uint256 blockNumber);
+    event Withdrawn(address indexed user, uint256 amount, uint256 timestamp, uint256 blockNumber);
     event EpochSnapshotted(uint256 indexed epochId, uint256 startBlock, uint256 endBlock, uint256 totalDeposits, uint256 totalYield);
     event YieldClaimed(address indexed user, uint256 indexed epochId, uint256 yieldAmount, bytes32 nullifier);
     event YieldRateUpdated(uint256 newYieldRate);
@@ -38,13 +39,13 @@ contract YieldVault {
         uint64 startBlock;
         uint64 endBlock;
         uint256 totalDeposits;
-        uint64 totalYield;
-        bytes32 balanceRoot;
+        uint64 totalYield;   // @dev - Total yield generated in the epoch  
+        bytes32 balanceRoot; // @dev - Merkle root of user's deposited balances at snapshot
         bool snapshotted;
     }
     
     struct UserDeposit {
-        uint256 balance;
+        uint256 balance;     // @dev - User's deposited balance
         uint256 lastDepositBlock;
         mapping(uint256 => bool) claimedEpochs;
     }
@@ -68,6 +69,12 @@ contract YieldVault {
     
     // Mapping from user address to their deposit info
     mapping(address => UserDeposit) private userDeposits;
+    
+    // Array of all depositor addresses
+    address[] public depositors;
+    
+    // Mapping to check if address is already in depositors array
+    mapping(address => bool) private isDepositor;
     
     // Mapping from nullifier to prevent double claiming
     mapping(bytes32 => bool) public usedNullifiers;
@@ -104,12 +111,41 @@ contract YieldVault {
         if (msg.value == 0) revert InvalidDeposit();
         
         UserDeposit storage userDeposit = userDeposits[msg.sender];
+        
+        // Add to depositors array if first deposit
+        if (!isDepositor[msg.sender]) {
+            depositors.push(msg.sender);
+            isDepositor[msg.sender] = true;
+        }
+        
         userDeposit.balance += msg.value;
         userDeposit.lastDepositBlock = block.number;
         
         totalDeposits += msg.value;
         
         emit Deposited(msg.sender, msg.value, block.timestamp, block.number);
+    }
+    
+    /**
+     * @notice Withdraw deposited funds from the vault
+     * @param amount The amount to withdraw
+     */
+    function withdraw(uint256 amount) external {
+        if (amount == 0) revert InvalidDeposit();
+        
+        UserDeposit storage userDeposit = userDeposits[msg.sender];
+        
+        if (userDeposit.balance < amount) revert InsufficientBalance();
+        
+        // Update balances
+        userDeposit.balance -= amount;
+        totalDeposits -= amount;
+        
+        // Transfer funds to user
+        (bool success, ) = msg.sender.call{value: amount}("");
+        if (!success) revert TransferFailed();
+        
+        emit Withdrawn(msg.sender, amount, block.timestamp, block.number);
     }
     
     /**
@@ -131,14 +167,62 @@ contract YieldVault {
         return userDeposits[user].claimedEpochs[epochId];
     }
     
+    /**
+     * @notice Get all depositor addresses
+     * @return Array of all depositor addresses
+     */
+    function getAllDepositors() external view returns (address[] memory) {
+        return depositors;
+    }
+    
+    /**
+     * @notice Get balances for multiple users
+     * @param users Array of user addresses
+     * @return balances Array of user balances
+     */
+    function getUserBalances(address[] calldata users) external view returns (uint256[] memory balances) {
+        balances = new uint256[](users.length);
+        for (uint256 i = 0; i < users.length; i++) {
+            balances[i] = userDeposits[users[i]].balance;
+        }
+    }
+    
+    /**
+     * @notice Get all depositors with their balances
+     * @return addresses Array of depositor addresses
+     * @return balances Array of corresponding balances
+     */
+    function getAllDepositorsWithBalances() external view returns (
+        address[] memory addresses,
+        uint256[] memory balances
+    ) {
+        uint256 length = depositors.length;
+        addresses = new address[](length);
+        balances = new uint256[](length);
+        
+        for (uint256 i = 0; i < length; i++) {
+            addresses[i] = depositors[i];
+            balances[i] = userDeposits[depositors[i]].balance;
+        }
+    }
+    
     // ============ Epoch Management ============
     
     /**
-     * @notice Take a snapshot of the current epoch and start a new one
+     * @notice Take a snapshot of the current epoch and start a new one (owner only)
      * @param _balanceRoot The Merkle root of all user balances
      * @param _totalYield The total yield for this epoch
      */
     function snapshotEpoch(bytes32 _balanceRoot, uint64 _totalYield) external onlyOwner {
+        _snapshotEpoch(_balanceRoot, _totalYield);
+    }
+    
+    /**
+     * @notice Internal function to snapshot the current epoch
+     * @param _balanceRoot The Merkle root of all user balances
+     * @param _totalYield The total yield for this epoch
+     */
+    function _snapshotEpoch(bytes32 _balanceRoot, uint64 _totalYield) internal {
         Epoch storage currentEpoch = epochs[currentEpochId];
         
         if (currentEpoch.snapshotted) revert EpochAlreadyEnded();
@@ -203,7 +287,6 @@ contract YieldVault {
     
     /**
      * @notice Claim yield using a ZK proof
-     * @param epochId The epoch for which to claim yield
      * @param proof The ZK proof bytes
      * @param publicInputs The public inputs for the proof
      * @dev Public inputs order (from the circuit):
@@ -221,8 +304,8 @@ contract YieldVault {
         bytes32[] calldata publicInputs
     ) external {
         Epoch storage epoch = epochs[epochId];
-        
-        // Validate epoch
+
+        // Validate epoch is snapshotted before allowing claims
         if (!epoch.snapshotted) revert EpochNotEnded();
         
         // Check if already claimed
@@ -279,7 +362,9 @@ contract YieldVault {
         // Validate total yield (index 5)
         if (uint64(uint256(publicInputs[5])) != epoch.totalYield) revert InvalidProof();
     }
-    
+
+    // ============ Yield Calculation ============
+
     /**
      * @notice Calculate yield amount from public inputs
      * @param publicInputs The public inputs array
@@ -287,7 +372,7 @@ contract YieldVault {
      */
     function _calculateYieldFromProof(bytes32[] calldata publicInputs) private view returns (uint256) {
         // Extract values from public inputs
-        uint64 blockNumber = uint64(uint256(publicInputs[1]));
+        // uint64 blockNumber = uint64(uint256(publicInputs[1])); // Currently unused
         uint64 _yieldRate = uint64(uint256(publicInputs[2]));
         uint64 epochStart = uint64(uint256(publicInputs[3]));
         uint64 epochEnd = uint64(uint256(publicInputs[4]));

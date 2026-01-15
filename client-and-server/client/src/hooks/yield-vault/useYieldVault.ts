@@ -57,16 +57,59 @@ export function useYieldVault() {
   // Write functions
   const deposit = async (amount: string) => {
     if (!vaultAddress) throw new Error('Vault address not found for this network');
+    if (!address) throw new Error('Wallet not connected');
     
-    return writeContract({
-      address: vaultAddress,
-      abi: YieldVaultABI,
-      functionName: 'deposit',
-      value: parseEther(amount),
-    });
+    try {
+      const value = parseEther(amount);
+      console.log('Preparing deposit:', {
+        vaultAddress,
+        amount,
+        value: value.toString(),
+        from: address,
+      });
+      
+      // Let the wallet handle gas estimation automatically
+      // Manual gas estimation on Mantle can sometimes cause issues
+      return writeContract({
+        address: vaultAddress,
+        abi: YieldVaultABI,
+        functionName: 'deposit',
+        value: value,
+      });
+    } catch (err) {
+      console.error('Deposit error:', err);
+      throw err;
+    }
   };
 
-  const claimYield = async (
+  const withdraw = async (amount: string) => {
+    if (!vaultAddress) throw new Error('Vault address not found for this network');
+    if (!address) throw new Error('Wallet not connected');
+    
+    try {
+      const amountInWei = parseEther(amount);
+      console.log('Preparing withdrawal:', {
+        vaultAddress,
+        amount,
+        amountInWei: amountInWei.toString(),
+        from: address,
+      });
+      
+      // Let the wallet handle gas estimation automatically
+      // Manual gas estimation on Mantle can sometimes cause issues
+      return writeContract({
+        address: vaultAddress,
+        abi: YieldVaultABI,
+        functionName: 'withdraw',
+        args: [amountInWei],
+      });
+    } catch (err) {
+      console.error('Withdraw error:', err);
+      throw err;
+    }
+  };
+
+  const claimYield = async(
     epochId: bigint,
     proof: `0x${string}`,
     publicInputs: `0x${string}`[]
@@ -78,6 +121,7 @@ export function useYieldVault() {
       abi: YieldVaultABI,
       functionName: 'claimYield',
       args: [epochId, proof, publicInputs],
+      gas: 500000n, // Higher gas limit for ZK proof verification
     });
   };
 
@@ -93,6 +137,7 @@ export function useYieldVault() {
     
     // Write functions
     deposit,
+    withdraw,
     claimYield,
     
     // Transaction state
@@ -145,6 +190,88 @@ export function useHasClaimedEpoch(epochId?: bigint) {
 
   return {
     hasClaimed,
+    refetch,
+  };
+}
+
+export function useUserDepositInfo() {
+  const chainId = useChainId();
+  const { address } = useAccount();
+  const vaultAddress = getContractAddresses(chainId)?.vault;
+
+  // Get user balance
+  const { data: balance } = useReadContract({
+    address: vaultAddress,
+    abi: YieldVaultABI,
+    functionName: 'getUserBalance',
+    args: address ? [address] : undefined,
+    query: {
+      enabled: !!address && !!vaultAddress,
+    },
+  });
+
+  // Get current epoch to simulate depositEpoch
+  const { data: currentEpochId } = useReadContract({
+    address: vaultAddress,
+    abi: YieldVaultABI,
+    functionName: 'currentEpochId',
+    query: {
+      enabled: !!vaultAddress,
+    },
+  });
+
+  // Since getUserDepositInfo doesn't exist in the contract anymore,
+  // we return the data in a compatible format
+  // Format: [balance, depositEpoch, epochsPassed, lastDepositBlock]
+  const depositInfo = (balance !== undefined && currentEpochId !== undefined) 
+    ? [balance, 0n, currentEpochId, 0n] as const 
+    : undefined;
+
+  return {
+    depositInfo,
+    refetch: () => {},
+  };
+}
+
+export function useEpochsPassedSinceDeposit() {
+  const chainId = useChainId();
+  const vaultAddress = getContractAddresses(chainId)?.vault;
+
+  // Get current epoch ID as a proxy for epochs passed
+  const { data: currentEpochId } = useReadContract({
+    address: vaultAddress,
+    abi: YieldVaultABI,
+    functionName: 'currentEpochId',
+    query: {
+      enabled: !!vaultAddress,
+    },
+  });
+
+  // Since getEpochsPassedSinceDeposit doesn't exist anymore,
+  // we return current epoch ID as epochs passed
+  const epochsPassed = currentEpochId;
+
+  return {
+    epochsPassed,
+    refetch: () => {},
+  };
+}
+
+export function useAllDepositorsWithBalances() {
+  const chainId = useChainId();
+  const vaultAddress = getContractAddresses(chainId)?.vault;
+
+  const { data: depositorsData, refetch } = useReadContract({
+    address: vaultAddress,
+    abi: YieldVaultABI,
+    functionName: 'getAllDepositorsWithBalances',
+    query: {
+      enabled: !!vaultAddress,
+    },
+  });
+
+  return {
+    depositorsData,
     refetch,
   };
 }
