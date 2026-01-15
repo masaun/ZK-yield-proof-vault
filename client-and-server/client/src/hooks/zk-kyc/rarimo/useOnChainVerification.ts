@@ -13,7 +13,7 @@ import {
   useAccount 
 } from 'wagmi'
 import { Address, encodeAbiParameters, parseAbiParameters, toHex } from 'viem'
-import { ZK_KYC_WITH_RARIMO_ABI } from '@/contracts/abis/zk-kyc/rarimo/ZkKycWithRarimoAbi.ts'
+import { ZK_KYC_WITH_RARIMO_ABI } from '@/contracts/abis/zk-kyc/rarimo/ZkKycWithRarimoAbi'
 
 interface UseOnChainVerificationProps {
   contractAddress: Address

@@ -1,16 +1,69 @@
 'use client';
 
-import { useState } from 'react';
-import { useYieldVault } from '@/hooks/yield-vault/useYieldVault';
+import { useState, useEffect } from 'react';
+import { useYieldVault, useSnapshotData, useAllDepositorsWithBalances } from '@/hooks/yield-vault/useYieldVault';
 import { useAccount } from 'wagmi';
 import { SimpleCard } from '@/components/ui/SimpleCard';
+import { buildMerkleTree, type UserBalance } from '@/zk-circuits/merkleTree';
 
 export function SnapshotEpochForm() {
   const [balanceRoot, setBalanceRoot] = useState('');
   const [totalYield, setTotalYield] = useState('');
   const [snapshotError, setSnapshotError] = useState<string>('');
+  const [isCalculating, setIsCalculating] = useState(false);
+  
   const { snapshotEpoch, isPending, isConfirming, isConfirmed, error, isOwner, refetchEpochId } = useYieldVault();
+  const { currentBalanceRoot, totalYield: calculatedTotalYield } = useSnapshotData();
+  const { depositorsData } = useAllDepositorsWithBalances();
   const { isConnected, address } = useAccount();
+
+  // Automatically calculate and populate balance root and total yield
+  useEffect(() => {
+    const calculateSnapshotData = async () => {
+      setIsCalculating(true);
+      try {
+        // Calculate balance root from depositors data
+        if (depositorsData && depositorsData.length > 0) {
+          const [addresses, balances] = depositorsData as [readonly string[], readonly bigint[]];
+          
+          if (addresses.length > 0 && balances.length > 0) {
+            // Build user balances array
+            const userBalances: UserBalance[] = addresses.map((addr, i) => ({
+              address: addr,
+              balance: balances[i],
+            }));
+
+            // Build Merkle tree
+            const { root } = buildMerkleTree(userBalances);
+            
+            // Convert root to hex string
+            const rootHex = '0x' + root.toString(16).padStart(64, '0');
+            setBalanceRoot(rootHex);
+          } else {
+            // No depositors, use zero hash
+            setBalanceRoot('0x0000000000000000000000000000000000000000000000000000000000000000');
+          }
+        } else if (currentBalanceRoot) {
+          // Fallback to current balance root from contract
+          setBalanceRoot(currentBalanceRoot);
+        }
+
+        // Set calculated total yield
+        if (calculatedTotalYield !== undefined) {
+          setTotalYield(calculatedTotalYield.toString());
+        }
+      } catch (err) {
+        console.error('Error calculating snapshot data:', err);
+        setSnapshotError('Failed to calculate snapshot data. Please refresh the page.');
+      } finally {
+        setIsCalculating(false);
+      }
+    };
+
+    if (isConnected && isOwner) {
+      calculateSnapshotData();
+    }
+  }, [depositorsData, currentBalanceRoot, calculatedTotalYield, isConnected, isOwner]);
 
   const handleSnapshot = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,19 +73,19 @@ export function SnapshotEpochForm() {
     
     // Validation
     if (!balanceRoot || balanceRoot.trim() === '') {
-      setSnapshotError('Please enter a valid balance root (32 bytes hex string)');
+      setSnapshotError('Balance root is not calculated. Please wait or refresh the page.');
       return;
     }
 
-    if (!totalYield || parseFloat(totalYield) < 0) {
-      setSnapshotError('Please enter a valid total yield amount');
+    if (!totalYield) {
+      setSnapshotError('Total yield is not calculated. Please wait or refresh the page.');
       return;
     }
 
     // Validate balance root format (should be 0x followed by 64 hex characters)
     const balanceRootRegex = /^0x[0-9a-fA-F]{64}$/;
     if (!balanceRootRegex.test(balanceRoot)) {
-      setSnapshotError('Balance root must be a valid bytes32 hex string (0x followed by 64 hex characters)');
+      setSnapshotError('Balance root is invalid. Please refresh the page and try again.');
       return;
     }
 
@@ -101,45 +154,49 @@ export function SnapshotEpochForm() {
   return (
     <SimpleCard title="Snapshot Current Epoch">
       <form onSubmit={handleSnapshot} className="d-flex flex-column gap-3">
+        {/* Info message about auto-calculation */}
+        <div className="alert alert-info d-flex align-items-center gap-2" role="alert" style={{fontSize: '0.75rem'}}>
+          <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+          </svg>
+          <span>Balance root and total yield are automatically calculated from on-chain data</span>
+        </div>
+
         {/* Balance Root Input */}
         <div>
           <label htmlFor="balanceRoot" className="form-label" style={{fontSize: '0.75rem', fontWeight: 500}}>
-            Balance Root (bytes32)
+            Balance Root (bytes32) {isCalculating && <span className="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true"></span>}
           </label>
           <input
             type="text"
             className="form-control"
             id="balanceRoot"
             value={balanceRoot}
-            onChange={(e) => setBalanceRoot(e.target.value)}
-            placeholder="0x0000000000000000000000000000000000000000000000000000000000000000"
-            disabled={isPending || isConfirming}
-            style={{fontSize: '0.875rem'}}
+            readOnly
+            placeholder="Calculating..."
+            style={{fontSize: '0.875rem', backgroundColor: '#f8f9fa'}}
           />
           <div className="form-text" style={{fontSize: '0.7rem'}}>
-            The Merkle root of all user balances at the snapshot
+            The Merkle root of all user balances (auto-calculated from depositors)
           </div>
         </div>
 
         {/* Total Yield Input */}
         <div>
           <label htmlFor="totalYield" className="form-label" style={{fontSize: '0.75rem', fontWeight: 500}}>
-            Total Yield (uint64)
+            Total Yield (uint64) {isCalculating && <span className="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true"></span>}
           </label>
           <input
-            type="number"
+            type="text"
             className="form-control"
             id="totalYield"
             value={totalYield}
-            onChange={(e) => setTotalYield(e.target.value)}
-            placeholder="0"
-            min="0"
-            step="1"
-            disabled={isPending || isConfirming}
-            style={{fontSize: '0.875rem'}}
+            readOnly
+            placeholder="Calculating..."
+            style={{fontSize: '0.875rem', backgroundColor: '#f8f9fa'}}
           />
           <div className="form-text" style={{fontSize: '0.7rem'}}>
-            The total yield generated in the current epoch (in wei)
+            The total yield generated in the current epoch in wei (auto-calculated)
           </div>
         </div>
 
@@ -167,13 +224,18 @@ export function SnapshotEpochForm() {
         <button
           type="submit"
           className="btn btn-primary w-100"
-          disabled={isPending || isConfirming || !balanceRoot || !totalYield}
+          disabled={isPending || isConfirming || isCalculating || !balanceRoot || !totalYield}
           style={{fontSize: '0.875rem'}}
         >
           {isPending || isConfirming ? (
             <>
               <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
               {isPending ? 'Confirming...' : 'Processing...'}
+            </>
+          ) : isCalculating ? (
+            <>
+              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+              Calculating...
             </>
           ) : (
             'Snapshot Epoch'
