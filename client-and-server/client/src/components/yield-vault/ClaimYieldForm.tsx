@@ -29,6 +29,14 @@ export function ClaimYieldForm() {
   // Track which operation is in progress to show correct notification
   const [currentOperation, setCurrentOperation] = useState<'snapshot' | 'claim' | null>(null);
   
+  // Store snapshot data at the time of snapshot to use after confirmation
+  const [pendingSnapshot, setPendingSnapshot] = useState<{
+    epochId: string;
+    addresses: string[];
+    balances: string[];
+    balanceRoot: string;
+  } | null>(null);
+  
   const { isConnected, address } = useAccount();
   const chainId = useChainId();
   const { 
@@ -82,35 +90,24 @@ export function ClaimYieldForm() {
 
   // Handle snapshot confirmation
   useEffect(() => {
-    if (isConfirmed && currentOperation === 'snapshot' && depositorsData && currentEpochId !== undefined && chainId) {
-      // Transaction confirmed, save snapshot data
-      const [addresses, balances] = depositorsData as [readonly `0x${string}`[], readonly bigint[]];
-      
-      // We need to recalculate the balance root to save it
-      let balanceRoot: string;
-      if (addresses.length > 0 && balances.length > 0) {
-        const userBalances: UserBalance[] = addresses.map((addr, i) => ({
-          address: addr,
-          balance: balances[i],
-        }));
-        const { root } = buildMerkleTree(userBalances);
-        balanceRoot = '0x' + root.toString(16).padStart(64, '0');
-      } else {
-        balanceRoot = '0x0000000000000000000000000000000000000000000000000000000000000000';
-      }
+    if (isConfirmed && currentOperation === 'snapshot' && pendingSnapshot && chainId) {
+      // Transaction confirmed, save the snapshot data that was captured BEFORE the transaction
+      console.log('Saving snapshot for epoch:', pendingSnapshot.epochId);
+      console.log('Balance root:', pendingSnapshot.balanceRoot);
       
       saveEpochSnapshot({
-        epochId: currentEpochId.toString(),
-        addresses: Array.from(addresses),
-        balances: balances.map(b => b.toString()),
-        balanceRoot: balanceRoot,
+        epochId: pendingSnapshot.epochId,
+        addresses: pendingSnapshot.addresses,
+        balances: pendingSnapshot.balances,
+        balanceRoot: pendingSnapshot.balanceRoot,
         timestamp: Date.now(),
         chainId,
       });
       
-      console.log(`Snapshot confirmed and saved for epoch ${currentEpochId}`);
+      console.log(`Snapshot confirmed and saved for epoch ${pendingSnapshot.epochId}`);
       setSnapshotSuccess(true);
       setIsSnapshotting(false);
+      setPendingSnapshot(null);
       
       // Refetch epoch ID, depositors data, and epoch data after delay
       setTimeout(async () => {
@@ -126,7 +123,7 @@ export function ClaimYieldForm() {
         setCurrentOperation(null);
       }, 3000);
     }
-  }, [isConfirmed, currentOperation, depositorsData, currentEpochId, chainId, refetchEpochId, refetchDepositorsData, refetchEpochData]);
+  }, [isConfirmed, currentOperation, pendingSnapshot, chainId, refetchEpochId, refetchDepositorsData, refetchEpochData]);
 
   // Auto-calculate Merkle proof and nullifier when epoch is selected
   useEffect(() => {
@@ -252,6 +249,16 @@ export function ClaimYieldForm() {
         balanceRoot,
         totalYield: totalYieldValue,
         currentEpochId: currentEpochId.toString(),
+        addresses: addresses.length,
+        balances: balances.length,
+      });
+
+      // Store snapshot data BEFORE the transaction to save after confirmation
+      setPendingSnapshot({
+        epochId: currentEpochId.toString(),
+        addresses: Array.from(addresses),
+        balances: balances.map(b => b.toString()),
+        balanceRoot: balanceRoot,
       });
 
       // Call snapshot function - this initiates the transaction
@@ -276,6 +283,8 @@ export function ClaimYieldForm() {
       }
       
       setSnapshotError(errorMessage);
+      setPendingSnapshot(null); // Clear pending snapshot on error
+      setCurrentOperation(null);
     } finally {
       setIsSnapshotting(false);
     }
