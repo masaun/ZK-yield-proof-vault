@@ -54,6 +54,18 @@ export function useYieldVault() {
     },
   });
 
+  const { data: owner } = useReadContract({
+    address: vaultAddress,
+    abi: YieldVaultABI,
+    functionName: 'owner',
+    query: {
+      enabled: !!vaultAddress,
+    },
+  });
+
+  // Check if the current user is the owner
+  const isOwner = address && owner ? (address.toLowerCase() === owner.toLowerCase()) : undefined;
+
   // Write functions
   const deposit = async (amount: string) => {
     if (!vaultAddress) throw new Error('Vault address not found for this network');
@@ -125,6 +137,32 @@ export function useYieldVault() {
     });
   };
 
+  const snapshotEpoch = async (balanceRoot: `0x${string}`, totalYield: string) => {
+    if (!vaultAddress) throw new Error('Vault address not found for this network');
+    if (!address) throw new Error('Wallet not connected');
+    
+    try {
+      const totalYieldBigInt = BigInt(totalYield);
+      console.log('Preparing epoch snapshot:', {
+        vaultAddress,
+        balanceRoot,
+        totalYield,
+        totalYieldBigInt: totalYieldBigInt.toString(),
+        from: address,
+      });
+      
+      return writeContract({
+        address: vaultAddress,
+        abi: YieldVaultABI,
+        functionName: 'snapshotEpoch',
+        args: [balanceRoot, totalYieldBigInt],
+      });
+    } catch (err) {
+      console.error('Snapshot epoch error:', err);
+      throw err;
+    }
+  };
+
   return {
     // Contract address
     vaultAddress,
@@ -134,11 +172,14 @@ export function useYieldVault() {
     totalDeposits,
     currentEpochId,
     yieldRate,
+    owner,
+    isOwner,
     
     // Write functions
     deposit,
     withdraw,
     claimYield,
+    snapshotEpoch,
     
     // Transaction state
     hash,
